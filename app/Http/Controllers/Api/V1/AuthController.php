@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\UserResource;
-use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Http\Request;
-use Exception;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class AuthController extends Controller
 {
@@ -18,63 +18,29 @@ class AuthController extends Controller
         $this->authService = $authService;
     }
 
-    public function index()
+    public function register(Request $request)
     {
         try {
-            $users = $this->authService->getAllUsers();
-            return response()->json($users);
-        } catch (Exception $e) {
-            return $this->error('Erro ao buscar usuários', 400, ['error' => $e->getMessage()]);
+            $user = $this->authService->registerUser($request->all());
+            return $this->response('Usuário registrado com sucesso!', 201, new UserResource($user));
+        } catch (ValidationException $e) {
+            return $this->error('Erro de validação', 422, $e->errors());
+        } catch (\Exception $e) {
+            return $this->error('Erro ao registrar usuário', 400, ['error' => $e->getMessage()]);
         }
     }
 
-    public function create()
-    {
-        return $this->error('Método não disponível', 405);
-    }
-
-    public function store(Request $request)
+    public function login(Request $request)
     {
         try {
-            $user = $this->authService->createUser($request->all());
-            return $this->response('Usuário criado com sucesso!', 201, new UserResource($user));
-        } catch (Exception $e) {
-            return $this->error('Erro ao criar novo usuário', 400, ['error' => $e->getMessage()]);
-        }
-    }
-
-    public function show(User $user)
-    {
-        try {
-            $item = new UserResource($user);
-            return response()->json($item);
-        } catch (Exception $e) {
-            return $this->error('Erro ao buscar usuário.', 400, ['error' => $e->getMessage()]);
-        }
-    }
-
-    public function edit(string $id)
-    {
-        return $this->error('Método não disponível', 405);
-    }
-
-    public function update(Request $request, User $user)
-    {
-        try {
-            $updatedUser = $this->authService->updateUser($user, $request->all());
-            return $this->response('Usuário atualizado com sucesso', 200, new UserResource($updatedUser));
-        } catch (Exception $e) {
-            return $this->error('Erro ao atualizar usuário', 400, ['error' => $e->getMessage()]);
-        }
-    }
-
-    public function destroy(User $user)
-    {
-        try {
-            $this->authService->deleteUser($user);
-            return $this->response('Usuário removido com sucesso', 200);
-        } catch (Exception $e) {
-            return $this->error('Erro ao remover usuário', 400, ['error' => $e->getMessage()]);
+            $authData = $this->authService->loginUser($request->all());
+            return $this->response('Login realizado com sucesso!', 200, $authData);
+        } catch (ValidationException $e) {
+            return $this->error('Erro de validação', 422, $e->errors());
+        } catch (HttpException $e) {
+            return $this->error($e->getMessage(), $e->getStatusCode());
+        } catch (\Exception $e) {
+            return $this->error('Erro ao fazer login', 400, ['error' => $e->getMessage()]);
         }
     }
 }

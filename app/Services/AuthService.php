@@ -4,117 +4,71 @@ namespace App\Services;
 
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Rule;
-use Exception;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class AuthService
 {
-    public function getAllUsers()
+    protected $userService;
+
+    public function __construct(UserService $userService)
     {
-        return UserResource::collection(User::all());
+        $this->userService = $userService;
     }
 
-    public function createUser(array $data)
+    public function registerUser(array $data)
     {
-        $validator = Validator::make(
-            $data,
-            [
-                'firstName' => ['required'],
-                'lastName'  => ['required'],
-                'email'     => ['required', 'email:rfc', 'unique:users'],
-                'password'  => ['required', Password::min(8)],
-                'balance'   => ['required', 'numeric', 'gt:-1'],
-            ]
-        );
+        $validator = $this->validateUser($data);
 
         if ($validator->fails()) {
-            throw new Exception(json_encode($validator->errors()), 422);
+            throw new ValidationException($validator);
         }
 
-        $data['password'] = Hash::make($data['password']);
+        $validatedData = $validator->validated();
+        $validatedData['password'] = Hash::make($validatedData['password']);
 
-        return User::create($data);
+        return User::create($validatedData);
     }
 
-    public function updateUser(User $user, array $data)
+    public function loginUser(array $data)
     {
-        DB::beginTransaction();
-
-        try {
-            $validator = Validator::make(
-                $data,
-                [
-                    'firstName' => ['sometimes', 'required'],
-                    'lastName'  => ['sometimes', 'required'],
-                    'email'     => ['sometimes', 'required', 'email:rfc', Rule::unique('users')->ignore($user->id)],
-                    'password'  => ['sometimes', 'required', Password::min(8)],
-                    'balance'   => ['sometimes', 'required', 'min:0.01'],
-                ]
-            );
-
-            if ($validator->fails()) {
-                throw new Exception(json_encode($validator->errors()), 422);
-            }
-
-            $validatedData = $validator->validated();
-
-            if (isset($validatedData['password'])) {
-                $validatedData['password'] = bcrypt($validatedData['password']);
-            }
-
-            $user->update($validatedData);
-
-            DB::commit();
-
-            return $user;
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw new Exception('Erro ao atualizar usuário: ' . $e->getMessage());
-        }
-    }
-
-    public function deleteUser(User $user)
-    {
-        DB::beginTransaction();
-
-        try {
-            $user->delete();
-            DB::commit();
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw new Exception('Erro ao remover usuário: ' . $e->getMessage());
-        }
-    }
-
-    public function login(Request $data)
-    {
-        $validator = Validator::make(
-            $data,
-            [
-                'email'     => ['required', 'email:rfc'],
-                'password'  => ['required'],
-            ]
-        );
+        $validator = Validator::make($data, [
+            'email' => ['required', 'email:rfc'],
+            'password' => ['required'],
+        ]);
 
         if ($validator->fails()) {
-            throw new Exception(json_encode($validator->errors()), 422);
+            throw new ValidationException($validator);
         }
 
-        if (!Auth::attempt($data->only(['email', 'password']))) {
-            throw new Exception('Email ou senha inválidos');
+        $credentials = ['email' => $data['email'], 'password' => $data['password']];
+
+        if (!Auth::attempt($credentials)) {
+            throw new HttpException(401, 'Email ou senha inválidos');
         }
 
-        $user = User::where('email', $data->email)->first();
+        $user = User::where('email', $data['email'])->first();
         $token = $user->createToken('access_token');
 
         return [
-            'token' => $token
+            'token' => $token,
+            'user' => new UserResource($user),
         ];
+    }
+
+    private function validateUser(array $data)
+    {
+        return Validator::make($data, [
+            'firstName' => ['required', 'string', 'max:255'],
+            'lastName' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email:rfc', Rule::unique('users')],
+            'password' => ['required', Password::min(8)],
+            'balance' => ['required', 'numeric', 'min:0'],
+        ]);
     }
 }
