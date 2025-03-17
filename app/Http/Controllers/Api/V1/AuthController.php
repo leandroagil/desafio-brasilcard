@@ -5,23 +5,23 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
-use App\Services\UserService;
-use Exception;
+use App\Services\AuthService;
 use Illuminate\Http\Request;
+use Exception;
 
-class UserController extends Controller
+class AuthController extends Controller
 {
-    protected $userService;
+    protected $authService;
 
-    public function __construct(UserService $userService)
+    public function __construct(AuthService $authService)
     {
-        $this->userService = $userService;
+        $this->authService = $authService;
     }
 
     public function index()
     {
         try {
-            $users = $this->userService->getAllUsers();
+            $users = $this->authService->getAllUsers();
             return response()->json($users);
         } catch (Exception $e) {
             return $this->error('Erro ao buscar usuários', 400, ['error' => $e->getMessage()]);
@@ -36,7 +36,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         try {
-            $user = $this->userService->createUser($request->all());
+            $user = $this->authService->createUser($request->all());
             return $this->response('Usuário criado com sucesso!', 201, new UserResource($user));
         } catch (Exception $e) {
             return $this->error('Erro ao criar novo usuário', 400, ['error' => $e->getMessage()]);
@@ -61,7 +61,7 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         try {
-            $updatedUser = $this->userService->updateUser($user, $request->all());
+            $updatedUser = $this->authService->updateUser($user, $request->all());
             return $this->response('Usuário atualizado com sucesso', 200, new UserResource($updatedUser));
         } catch (Exception $e) {
             return $this->error('Erro ao atualizar usuário', 400, ['error' => $e->getMessage()]);
@@ -71,7 +71,7 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         try {
-            $this->userService->deleteUser($user);
+            $this->authService->deleteUser($user);
             return $this->response('Usuário removido com sucesso', 200);
         } catch (Exception $e) {
             return $this->error('Erro ao remover usuário', 400, ['error' => $e->getMessage()]);

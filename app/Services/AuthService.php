@@ -4,14 +4,16 @@ namespace App\Services;
 
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
-use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Rule;
+use Exception;
+use Illuminate\Support\Facades\Auth;
 
-class UserService
+class AuthService
 {
     public function getAllUsers()
     {
@@ -88,5 +90,31 @@ class UserService
             DB::rollBack();
             throw new Exception('Erro ao remover usuário: ' . $e->getMessage());
         }
+    }
+
+    public function login(Request $data)
+    {
+        $validator = Validator::make(
+            $data,
+            [
+                'email'     => ['required', 'email:rfc'],
+                'password'  => ['required'],
+            ]
+        );
+
+        if ($validator->fails()) {
+            throw new Exception(json_encode($validator->errors()), 422);
+        }
+
+        if (!Auth::attempt($data->only(['email', 'password']))) {
+            throw new Exception('Email ou senha inválidos');
+        }
+
+        $user = User::where('email', $data->email)->first();
+        $token = $user->createToken('access_token');
+
+        return [
+            'token' => $token
+        ];
     }
 }
