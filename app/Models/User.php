@@ -15,6 +15,6 @@ class User extends Model
         'lastName',
         'email',
         'password',
-        'total_amount',
+        'balance',
     ];
 }

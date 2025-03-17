@@ -14,7 +14,7 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $amountInReais = "R$ " . number_format($this->total_amount, 2, ',', '.');
+        $amountInReais = "R$ " . number_format($this->balance, 2, ',', '.');
         $fullName = "{$this->firstName} {$this->lastName}";
 
         return [
@@ -24,7 +24,7 @@ class UserResource extends JsonResource
             'fullName' => $fullName,
             'email' => $this->email,
             'password' => $this->password,
-            'total_amount' => $amountInReais,
+            'balance' => $amountInReais,
         ];
     }
 }

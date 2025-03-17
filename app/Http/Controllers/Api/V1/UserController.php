@@ -21,8 +21,8 @@ class UserController extends Controller
     public function index()
     {
         try {
-            $items = $this->userService->getAllUsers();
-            return response()->json($items);
+            $users = $this->userService->getAllUsers();
+            return response()->json($users);
         } catch (Exception $e) {
             return $this->error('Erro ao buscar usuários', 400, ['error' => $e->getMessage()]);
         }

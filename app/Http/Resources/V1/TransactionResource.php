@@ -18,15 +18,15 @@ class TransactionResource extends JsonResource
         $receiverTotalAmount = 0;
         $senderTotalAmount = 0;
 
-        $receiverFullName = $this->receiver ? $this->receiver->full_name : 'Unknown';
-        $senderFullName = $this->sender ? $this->sender->full_name : 'Unknown';
+        $senderFullName = $this->sender ? "{$this->sender->firstName} {$this->sender->lastName}" : 'Unknown';
+        $receiverFullName = $this->receiver ? "{$this->receiver->firstName} {$this->receiver->lastName}" : 'Unknown';
 
         if ($this->receiver) {
-            $receiverTotalAmount = "R$ " . number_format($this->receiver->total_amount, 2, ',', '.');
+            $receiverTotalAmount = "R$ " . number_format($this->receiver->balance, 2, ',', '.');
         }
 
         if ($this->sender) {
-            $senderTotalAmount = "R$ " . number_format($this->sender->total_amount, 2, ',', '.');
+            $senderTotalAmount = "R$ " . number_format($this->sender->balance, 2, ',', '.');
         }
 
         return [
@@ -36,7 +36,7 @@ class TransactionResource extends JsonResource
                 'lastName' => $this->sender->lastName,
                 'fullName' => $senderFullName,
                 'email' => $this->sender->email,
-                'total_amount' => $senderTotalAmount,
+                'balance' => $senderTotalAmount,
             ] : null,
 
             'receiver'  => $this->receiver ? [
@@ -45,7 +45,7 @@ class TransactionResource extends JsonResource
                 'lastName' => $this->receiver->lastName,
                 'fullName' => $receiverFullName,
                 'email' => $this->receiver->email,
-                'total_amount' => $receiverTotalAmount,
+                'balance' => $receiverTotalAmount,
             ] : null,
 
             'amount'      => $transactionAmountInReais,

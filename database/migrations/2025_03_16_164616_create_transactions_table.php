@@ -19,8 +19,8 @@ return new class extends Migration
             $table->string('description')->nullable();
             $table->enum('status', ['cancelled', 'completed'])->default('completed');
             $table->enum('type', ['transfer', 'deposit', 'withdrawal'])->default('transfer');
-            $table->foreign('receiver_id')->references('id')->on('users');
-            $table->foreign('sender_id')->references('id')->on('users');
+            $table->foreign('receiver_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('sender_id')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\TransactionResource;
 use App\Models\Transaction;
 use App\Services\TransactionService;
-use Exception;
 use Illuminate\Http\Request;
+use Exception;
 
 class TransactionController extends Controller
 {
@@ -20,8 +20,12 @@ class TransactionController extends Controller
 
     public function index()
     {
-        $transactions = Transaction::with(['sender', 'receiver'])->get();
-        return TransactionResource::collection($transactions);
+        try {
+            $transactions = $this->transactionService->getAllTransactions();
+            return response()->json($transactions);
+        } catch (Exception $e) {
+            return $this->error('Erro ao fazer transferência', 400, ['error' => $e->getMessage()]);
+        }
     }
 
     public function create()
@@ -63,7 +67,7 @@ class TransactionController extends Controller
     {
         try {
             $this->transactionService->destroy($transaction);
-            return $this->response('Transação removida com sucesso', 200);
+            return $this->response('Transação removida com sucesso', 204);
         } catch (Exception $e) {
             return $this->error('Erro ao remover transação', 400, ['error' => $e->getMessage()]);
         }

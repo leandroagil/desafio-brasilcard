@@ -6,6 +6,7 @@ use App\Http\Resources\V1\UserResource;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Rule;
@@ -23,10 +24,10 @@ class UserService
             $data,
             [
                 'firstName' => ['required'],
-                'lastName' => ['required'],
-                'email' => ['required', 'email:rfc', 'unique:users'],
-                'password' => ['required', Password::min(8)],
-                'total_amount' => ['required'],
+                'lastName'  => ['required'],
+                'email'     => ['required', 'email:rfc', 'unique:users'],
+                'password'  => ['required', Password::min(8)],
+                'balance'   => ['required', 'numeric', 'gt:-1'],
             ]
         );
 
@@ -34,7 +35,9 @@ class UserService
             throw new Exception(json_encode($validator->errors()), 422);
         }
 
-        return User::create($validator->validated());
+        $data['password'] = Hash::make($data['password']);
+
+        return User::create($data);
     }
 
     public function updateUser(User $user, array $data)
@@ -46,10 +49,10 @@ class UserService
                 $data,
                 [
                     'firstName' => ['sometimes', 'required'],
-                    'lastName' => ['sometimes', 'required'],
-                    'email' => ['sometimes', 'required', 'email:rfc', Rule::unique('users')->ignore($user->id)],
-                    'password' => ['sometimes', 'required', Password::min(8)],
-                    'total_amount' => ['sometimes', 'required'],
+                    'lastName'  => ['sometimes', 'required'],
+                    'email'     => ['sometimes', 'required', 'email:rfc', Rule::unique('users')->ignore($user->id)],
+                    'password'  => ['sometimes', 'required', Password::min(8)],
+                    'balance'   => ['sometimes', 'required', 'min:0.01'],
                 ]
             );
 

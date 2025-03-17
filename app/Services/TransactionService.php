@@ -11,6 +11,12 @@ use Illuminate\Support\Facades\Validator;
 
 class TransactionService
 {
+    public function getAllTransactions()
+    {
+        $transactions = TransactionResource::collection(Transaction::with(['sender', 'receiver'])->get());
+        return $transactions;
+    }
+
     public function store(array $data)
     {
         DB::beginTransaction();
@@ -31,21 +37,22 @@ class TransactionService
             }
 
             $validatedData = $validator->validated();
+
             $sender = User::find($validatedData['sender_id']);
             $receiver = User::find($validatedData['receiver_id']);
 
-            if ($validatedData['amount'] > $sender->total_amount) {
+            if ($validatedData['amount'] > $sender->balance) {
                 throw new Exception("Saldo insuficiente para nova transferência");
             }
 
-            if ($receiver->total_amount < 0) {
+            if ($receiver->balance < 0) {
                 throw new Exception('Devido ao saldo negativo do recebedor, sua transferência foi cancelada.');
             }
 
             $transaction = Transaction::create($validatedData);
 
-            $sender->decrement('total_amount', $validatedData['amount']);
-            $receiver->increment('total_amount', $validatedData['amount']);
+            $sender->decrement('balance', $validatedData['amount']);
+            $receiver->increment('balance', $validatedData['amount']);
 
             DB::commit();
 
@@ -64,7 +71,7 @@ class TransactionService
             $validator = Validator::make(
                 $data,
                 [
-                    'status' => ['sometimes', 'string', 'in:completed,cancelled'],
+                    'status'      => ['sometimes', 'string', 'in:completed,cancelled'],
                     'description' => ['sometimes', 'string', 'max:255'],
                 ]
             );
@@ -79,8 +86,8 @@ class TransactionService
                 $sender = User::find($transaction->sender_id);
                 $receiver = User::find($transaction->receiver_id);
 
-                $sender->increment('total_amount', $transaction->amount);
-                $receiver->decrement('total_amount', $transaction->amount);
+                $sender->increment('balance', $transaction->amount);
+                $receiver->decrement('balance', $transaction->amount);
             }
 
             $transaction->update($validatedData);
@@ -103,8 +110,8 @@ class TransactionService
                 $sender = User::find($transaction->sender_id);
                 $receiver = User::find($transaction->receiver_id);
 
-                $sender->increment('total_amount', $transaction->amount);
-                $receiver->decrement('total_amount', $transaction->amount);
+                $sender->increment('balance', $transaction->amount);
+                $receiver->decrement('balance', $transaction->amount);
             }
 
             $transaction->delete();
@@ -126,8 +133,8 @@ class TransactionService
             $validator = Validator::make(
                 $data,
                 [
-                    'user_id' => ['required', 'exists:users,id'],
-                    'amount' => ['required', 'numeric', 'min:0.01'],
+                    'user_id'     => ['required', 'exists:users,id'],
+                    'amount'      => ['required', 'numeric', 'min:0.01'],
                     'description' => ['sometimes', 'string', 'max:255'],
                 ]
             );
@@ -139,20 +146,20 @@ class TransactionService
             $validatedData = $validator->validated();
             $user = User::findOrFail($validatedData['user_id']);
 
-            if ($user->total_amount < 0) {
+            if ($user->balance < 0) {
                 throw new Exception('Devido ao saldo negativo, seu depósito foi cancelado.');
             }
 
             $deposit = Transaction::create([
                 'receiver_id' => $validatedData['user_id'],
-                'sender_id' => null,
-                'amount' => $validatedData['amount'],
-                'status' => 'completed',
+                'sender_id'   => null,
+                'amount'      => $validatedData['amount'],
+                'status'      => 'completed',
                 'description' => $validatedData['description'] ?? 'Depósito na conta',
-                'type' => 'deposit'
+                'type'        => 'deposit'
             ]);
 
-            $user->increment('total_amount', $validatedData['amount']);
+            $user->increment('balance', $validatedData['amount']);
 
             DB::commit();
 
