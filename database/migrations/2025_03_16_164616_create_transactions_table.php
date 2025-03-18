@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->decimal('amount', 10, 2);
             $table->unsignedBigInteger('sender_id')->nullable();
             $table->unsignedBigInteger('receiver_id');
+            $table->decimal('amount', 10, 2);
             $table->string('description')->nullable();
             $table->enum('status', ['cancelled', 'completed'])->default('completed');
             $table->enum('type', ['transfer', 'deposit', 'withdrawal'])->default('transfer');

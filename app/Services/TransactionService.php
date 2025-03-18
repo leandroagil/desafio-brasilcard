@@ -5,9 +5,10 @@ namespace App\Services;
 use App\Http\Resources\V1\TransactionResource;
 use App\Models\Transaction;
 use App\Models\User;
-use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+use Exception;
 
 class TransactionService
 {
@@ -33,7 +34,7 @@ class TransactionService
             );
 
             if ($validator->fails()) {
-                throw new Exception(json_encode($validator->errors()), 422);
+                throw new ValidationException($validator);
             }
 
             $validatedData = $validator->validated();
@@ -77,7 +78,7 @@ class TransactionService
             );
 
             if ($validator->fails()) {
-                throw new Exception(json_encode($validator->errors()), 422);
+                throw new ValidationException($validator);
             }
 
             $validatedData = $validator->validated();
@@ -140,7 +141,7 @@ class TransactionService
             );
 
             if ($validator->fails()) {
-                throw new Exception(json_encode($validator->errors()), 422);
+                throw new ValidationException($validator);
             }
 
             $validatedData = $validator->validated();
