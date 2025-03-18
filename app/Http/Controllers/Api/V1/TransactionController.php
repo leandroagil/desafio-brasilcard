@@ -106,4 +106,19 @@ class TransactionController extends Controller
             return $this->error('Erro ao processar depósito', 400, ['error' => $e->getMessage()]);
         }
     }
+
+    public function reverse(Transaction $transaction)
+    {
+        try {
+            $reversedTransaction = $this->transactionService->reverse($transaction);
+            Log::info('Transação revertida com sucesso', ['deposit' => $reversedTransaction]);
+            return $this->response('Transação revertida com sucesso!', 201, $reversedTransaction);
+        } catch (ValidationException $e) {
+            Log::warning('Erro de validação na transação', ['errors' => $e->errors()]);
+            return $this->error('Erro de validação.', 400, ['error' => $e->errors()]);
+        } catch (Exception $e) {
+            Log::error('Erro ao processar reversão da transação', ['error' => $e->getMessage()]);
+            return $this->error('Erro ao processar reversão', 400, ['error' => $e->getMessage()]);
+        }
+    }
 }

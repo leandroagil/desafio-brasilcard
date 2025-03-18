@@ -9,6 +9,8 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/transactions/deposit', [TransactionController::class, 'deposit']);
+        Route::post('/transactions/reverse/{transaction}', [TransactionController::class, 'reverse']);
+
         Route::apiResource('transactions', TransactionController::class);
         Route::apiResource('users', UserController::class);
     });

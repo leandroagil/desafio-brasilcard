@@ -17,8 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('receiver_id');
             $table->decimal('amount', 10, 2);
             $table->string('description')->nullable();
-            $table->enum('status', ['cancelled', 'completed'])->default('completed');
-            $table->enum('type', ['transfer', 'deposit', 'withdrawal'])->default('transfer');
+            $table->enum('status', ['cancelled', 'completed', 'reversed'])->default('completed');
+            $table->enum('type', ['transfer', 'deposit', 'withdrawal', 'reverse'])->default('transfer');
             $table->foreign('receiver_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('sender_id')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();

@@ -170,4 +170,47 @@ class TransactionService
             throw new Exception($e->getMessage(), 400);
         }
     }
+
+    public function reverse(Transaction $transaction)
+    {
+        DB::beginTransaction();
+
+        try {
+            $sender = null;
+
+            if ($transaction->status === 'reversed') {
+                throw new Exception('A transação já sofreu a reversão!');
+            }
+
+            if ($transaction->type !== "deposit") {
+                $sender = User::findOrFail($transaction->sender_id);
+            }
+
+            $receiver = User::findOrFail($transaction->receiver_id);
+
+            if ($sender) {
+                $sender->increment('balance', $transaction->amount);
+            }
+
+            $receiver->decrement('balance', $transaction->amount);
+
+            $reverseTransaction = Transaction::create([
+                'sender_id'   => $receiver->id,
+                'receiver_id' => $sender ? $sender->id : null,
+                'amount'      => $transaction->amount,
+                'status'      => 'reversed',
+                'description' => 'Reversão de transação ' . $transaction->id,
+                'type'        => 'reverse',
+            ]);
+
+            $transaction->update(['status' => 'reversed']);
+
+            DB::commit();
+
+            return new TransactionResource($reverseTransaction);
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw new Exception($e->getMessage(), 400);
+        }
+    }
 }
