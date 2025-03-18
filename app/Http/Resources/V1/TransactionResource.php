@@ -30,6 +30,12 @@ class TransactionResource extends JsonResource
         }
 
         return [
+            'id'          => $this->id,
+            'amount'      => $transactionAmountInReais,
+            'description' => $this->description,
+            'type'        => $this->type,
+            'status'      => $this->status,
+
             'sender'    => $this->sender ? [
                 'id' => $this->sender->id,
                 'firstName' => $this->sender->firstName,
@@ -47,11 +53,6 @@ class TransactionResource extends JsonResource
                 'email' => $this->receiver->email,
                 'balance' => $receiverTotalAmount,
             ] : null,
-
-            'amount'      => $transactionAmountInReais,
-            'description' => $this->description,
-            'type'        => $this->type,
-            'status'      => $this->status,
         ];
     }
 }
