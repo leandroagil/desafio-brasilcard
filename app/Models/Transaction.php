@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 
 class Transaction extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'sender_id',
         'receiver_id',
@@ -17,6 +14,11 @@ class Transaction extends Model
         'status',
         'type',
         'description'
+    ];
+
+    protected $attributes = [
+        'status' => 'completed',
+        'type' => 'transfer',
     ];
 
     public function sender()
