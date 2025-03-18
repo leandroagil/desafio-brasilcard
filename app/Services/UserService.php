@@ -19,18 +19,26 @@ class UserService
         return UserResource::collection(User::all());
     }
 
+    public function createUser(array $data)
+    {
+        $validator = $this->validateUserCreate($data);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $validatedData = $validator->validated();
+        $validatedData['password'] = Hash::make($validatedData['password']);
+
+        return User::create($validatedData);
+    }
+
     public function updateUser(User $user, array $data)
     {
         DB::beginTransaction();
 
         try {
-            $validator = Validator::make($data, [
-                'firstName' => ['sometimes', 'required', 'string', 'max:255'],
-                'lastName'  => ['sometimes', 'required', 'string', 'max:255'],
-                'email'     => ['sometimes', 'required', 'email:rfc', Rule::unique('users')->ignore($user->id)],
-                'password'  => ['sometimes', 'required', Password::min(8)],
-                'balance'   => ['sometimes', 'required', 'numeric', 'min:0'],
-            ]);
+            $validator = $this->validateUserUpdate($user, $data);
 
             if ($validator->fails()) {
                 throw new ValidationException($validator);
@@ -63,5 +71,27 @@ class UserService
             DB::rollBack();
             throw new Exception('Erro ao remover usuário: ' . $e->getMessage());
         }
+    }
+
+    private function validateUserCreate(array $data)
+    {
+        return Validator::make($data, [
+            'firstName' => ['required', 'string', 'max:255'],
+            'lastName'  => ['required', 'string', 'max:255'],
+            'email'     => ['required', 'email:rfc', Rule::unique('users')],
+            'password'  => ['required', Password::min(8)],
+            'balance'   => ['required', 'numeric', 'min:0'],
+        ]);
+    }
+
+    private function validateUserUpdate(User $user, array $data)
+    {
+        return Validator::make($data, [
+            'firstName' => ['sometimes', 'required', 'string', 'max:255'],
+            'lastName'  => ['sometimes', 'required', 'string', 'max:255'],
+            'email'     => ['sometimes', 'required', 'email:rfc', Rule::unique('users')->ignore($user->id)],
+            'password'  => ['sometimes', 'required', Password::min(8)],
+            'balance'   => ['sometimes', 'required', 'numeric', 'min:0'],
+        ]);
     }
 }

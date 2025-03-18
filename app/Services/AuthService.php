@@ -23,16 +23,8 @@ class AuthService
 
     public function registerUser(array $data)
     {
-        $validator = $this->validateUser($data);
-
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
-        }
-
-        $validatedData = $validator->validated();
-        $validatedData['password'] = Hash::make($validatedData['password']);
-
-        return User::create($validatedData);
+        $user = $this->userService->createUser($data);
+        return $user;
     }
 
     public function loginUser(array $data)
