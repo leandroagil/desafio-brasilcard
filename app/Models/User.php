@@ -19,4 +19,8 @@ class User extends Authenticatable
         'password',
         'balance',
     ];
+
+    protected $attributes = [
+        'balance' => 0,
+    ];
 }

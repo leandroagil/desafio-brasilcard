@@ -13,8 +13,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory(2)->create();
-
         // Usuário com saldo negativo
         User::factory()->create([
             'firstName'   => fake()->firstName(),
@@ -23,5 +21,7 @@ class DatabaseSeeder extends Seeder
             'password'    => Hash::make('password'),
             'balance'     => -100
         ]);
+
+        User::factory(2)->create();
     }
 }

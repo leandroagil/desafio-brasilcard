@@ -30,37 +30,43 @@ class AuthService
             return [
                 'token' => $token->plainTextToken,
                 'user' => new UserResource($user),
-                'message' => 'User registered successfully'
+                'message' => 'Usuário registrado com sucesso'
             ];
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
-            Log::error('User registration failed', [
+            Log::error('Erro ao registrar usuário', [
                 'email' => $data['email'] ?? null,
                 'error' => $e->getMessage()
             ]);
 
-            throw new HttpException(500, 'Registration failed: ' . $e->getMessage());
+            throw new HttpException(500, 'Erro ao registrar usuário: ' . $e->getMessage());
         }
     }
 
     public function loginUser(array $data): array
     {
         $validatedData = $this->validateLoginData($data);
+        $credentials = [
+            'email' => $validatedData['email'],
+            'password' => $validatedData['password']
+        ];
 
         try {
-            if (!Auth::attempt([
-                'email' => $validatedData['email'],
-                'password' => $validatedData['password']
-            ])) {
-                Log::info('Failed login attempt', ['email' => $validatedData['email']]);
-                throw new AuthenticationException('Invalid email or password');
+            if (!Auth::attempt($credentials)) {
+                Log::info('Erro ao logar', ['email' => $validatedData['email']]);
+                throw new AuthenticationException('Email ou senha inválidos');
             }
 
             $user = User::where('email', $validatedData['email'])->firstOrFail();
             $tokenResult = $user->createToken('access_token');
 
-            $this->logSuccessfulLogin($user);
+            Log::info('Usuário logado com sucesso', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
 
             return [
                 'token' => $tokenResult->plainTextToken,
@@ -69,16 +75,16 @@ class AuthService
                 'user' => new UserResource($user),
             ];
         } catch (ModelNotFoundException $e) {
-            Log::error('User not found during login', ['email' => $validatedData['email']]);
-            throw new AuthenticationException('Invalid email or password');
+            Log::error('Usuário não encontrado', ['email' => $validatedData['email']]);
+            throw new AuthenticationException('Email ou senha inválidos');
         } catch (AuthenticationException $e) {
             throw $e;
         } catch (\Exception $e) {
-            Log::error('Login failed', [
+            Log::error('Erro ao logar', [
                 'email' => $validatedData['email'],
                 'error' => $e->getMessage()
             ]);
-            throw new HttpException(500, 'Login failed: ' . $e->getMessage());
+            throw new HttpException(500, 'Erro ao logar: ' . $e->getMessage());
         }
     }
 
@@ -95,15 +101,5 @@ class AuthService
         }
 
         return $validator->validated();
-    }
-
-    private function logSuccessfulLogin(User $user): void
-    {
-        Log::info('User logged in successfully', [
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
     }
 }

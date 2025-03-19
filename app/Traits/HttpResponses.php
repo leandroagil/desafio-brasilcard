@@ -3,7 +3,6 @@
 namespace App\Traits;
 
 use Illuminate\Contracts\Support\MessageBag;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 trait HttpResponses

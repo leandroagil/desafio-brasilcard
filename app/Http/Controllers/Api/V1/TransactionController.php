@@ -8,8 +8,8 @@ use App\Models\Transaction;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-use Exception;
 use Illuminate\Support\Facades\Log;
+use Exception;
 
 class TransactionController extends Controller
 {

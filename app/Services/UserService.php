@@ -90,6 +90,7 @@ class UserService
             }, $rules);
 
             $rules['email'][] = Rule::unique('users');
+            $rules['balance'][] = 'sometimes';
         }
 
         if ($operation === 'update') {

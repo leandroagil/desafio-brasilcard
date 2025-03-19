@@ -23,11 +23,11 @@ class TransactionService
 
     public function getAllTransactions(int $perPage = 15)
     {
-        return TransactionResource::collection(
-            Transaction::with(['sender', 'receiver'])
-                ->latest()
-                ->paginate($perPage)
-        );
+        $transactions = Transaction::with(['sender', 'receiver'])
+            ->latest()
+            ->paginate($perPage);
+
+        return TransactionResource::collection($transactions);
     }
 
     public function transfer(array $data)
