@@ -9,183 +9,145 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class TransactionService
 {
-    public function getAllTransactions()
+    const TYPE_TRANSFER = 'transfer';
+    const TYPE_DEPOSIT = 'deposit';
+    const TYPE_REVERSE = 'reverse';
+
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_CANCELLED = 'cancelled';
+    const STATUS_REVERSED = 'reversed';
+
+    public function getAllTransactions(int $perPage = 15)
     {
-        $transactions = TransactionResource::collection(Transaction::with(['sender', 'receiver'])->get());
-        return $transactions;
+        return TransactionResource::collection(
+            Transaction::with(['sender', 'receiver'])
+                ->latest()
+                ->paginate($perPage)
+        );
     }
 
-    public function store(array $data)
+    public function transfer(array $data)
     {
-        DB::beginTransaction();
+        return DB::transaction(function () use ($data) {
+            $validatedData = $this->validateTransferData($data);
 
-        try {
-            $validator = Validator::make(
-                $data,
-                [
-                    'sender_id'   => ['required', 'exists:users,id'],
-                    'receiver_id' => ['required', 'exists:users,id', 'different:sender_id'],
-                    'amount'      => ['required', 'numeric', 'min:0.01'],
-                    'description' => ['required']
-                ]
-            );
+            $sender = User::findOrFail($validatedData['sender_id']);
+            $receiver = User::findOrFail($validatedData['receiver_id']);
 
-            if ($validator->fails()) {
-                throw new ValidationException($validator);
-            }
+            $this->verifyTransferEligibility($sender, $receiver, $validatedData['amount']);
 
-            $validatedData = $validator->validated();
-
-            $sender = User::find($validatedData['sender_id']);
-            $receiver = User::find($validatedData['receiver_id']);
-
-            if ($validatedData['amount'] > $sender->balance) {
-                throw new Exception("Saldo insuficiente para nova transferência");
-            }
-
-            if ($receiver->balance < 0) {
-                throw new Exception('Devido ao saldo negativo do recebedor, sua transferência foi cancelada.');
-            }
-
-            $transaction = Transaction::create($validatedData);
+            $transaction = Transaction::create([
+                'sender_id' => $validatedData['sender_id'],
+                'receiver_id' => $validatedData['receiver_id'],
+                'amount' => $validatedData['amount'],
+                'description' => $validatedData['description'],
+                'status' => self::STATUS_COMPLETED,
+                'type' => self::TYPE_TRANSFER,
+            ]);
 
             $sender->decrement('balance', $validatedData['amount']);
             $receiver->increment('balance', $validatedData['amount']);
 
-            DB::commit();
+            Log::info('Transfer completed', [
+                'transaction_id' => $transaction->id,
+                'sender_id' => $sender->id,
+                'receiver_id' => $receiver->id,
+                'amount' => $validatedData['amount']
+            ]);
 
             return new TransactionResource($transaction);
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw new Exception($e->getMessage(), 400);
-        }
+        });
     }
 
     public function update(Transaction $transaction, array $data)
     {
-        DB::beginTransaction();
+        return DB::transaction(function () use ($transaction, $data) {
+            $validatedData = $this->validateUpdateData($data);
 
-        try {
-            $validator = Validator::make(
-                $data,
-                [
-                    'status'      => ['sometimes', 'string', 'in:completed,cancelled'],
-                    'description' => ['sometimes', 'string', 'max:255'],
-                ]
-            );
+            $originalStatus = $transaction->status;
+            $newStatus = $validatedData['status'] ?? $originalStatus;
 
-            if ($validator->fails()) {
-                throw new ValidationException($validator);
-            }
-
-            $validatedData = $validator->validated();
-
-            if ($transaction->status == 'completed' && ($validatedData['status'] ?? '') == 'cancelled') {
-                $sender = User::find($transaction->sender_id);
-                $receiver = User::find($transaction->receiver_id);
-
-                $sender->increment('balance', $transaction->amount);
-                $receiver->decrement('balance', $transaction->amount);
+            if ($originalStatus === self::STATUS_COMPLETED && $newStatus === self::STATUS_CANCELLED) {
+                $this->reverseTransactionBalances($transaction);
             }
 
             $transaction->update($validatedData);
 
-            DB::commit();
+            Log::info('Transaction updated', [
+                'transaction_id' => $transaction->id,
+                'previous_status' => $originalStatus,
+                'new_status' => $newStatus
+            ]);
 
-            return new TransactionResource($transaction);
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw new Exception($e->getMessage(), 400);
-        }
+            return new TransactionResource($transaction->fresh(['sender', 'receiver']));
+        });
     }
 
     public function destroy(Transaction $transaction)
     {
-        DB::beginTransaction();
-
-        try {
-            if ($transaction->status == 'completed' && $transaction->type === 'transfer') {
-                $sender = User::find($transaction->sender_id);
-                $receiver = User::find($transaction->receiver_id);
-
-                $sender->increment('balance', $transaction->amount);
-                $receiver->decrement('balance', $transaction->amount);
+        return DB::transaction(function () use ($transaction) {
+            if (
+                $transaction->status === self::STATUS_COMPLETED &&
+                $transaction->type === self::TYPE_TRANSFER
+            ) {
+                $this->reverseTransactionBalances($transaction);
             }
 
-            $transaction->delete();
+            $transactionId = $transaction->id;
+            $result = $transaction->delete();
 
-            DB::commit();
+            Log::info('Transaction deleted', [
+                'transaction_id' => $transactionId
+            ]);
 
-            return true;
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw new Exception($e->getMessage(), 400);
-        }
+            return $result;
+        });
     }
 
     public function deposit(array $data)
     {
-        DB::beginTransaction();
+        return DB::transaction(function () use ($data) {
+            $validatedData = $this->validateDepositData($data);
 
-        try {
-            $validator = Validator::make(
-                $data,
-                [
-                    'user_id'     => ['required', 'exists:users,id'],
-                    'amount'      => ['required', 'numeric', 'min:0.01'],
-                    'description' => ['sometimes', 'string', 'max:255'],
-                ]
-            );
-
-            if ($validator->fails()) {
-                throw new ValidationException($validator);
-            }
-
-            $validatedData = $validator->validated();
             $user = User::findOrFail($validatedData['user_id']);
 
-            if ($user->balance < 0) {
-                throw new Exception('Devido ao saldo negativo, seu depósito foi cancelado.');
+            if (isset($validatedData['check_balance']) && $validatedData['check_balance'] && $user->balance < 0) {
+                throw new Exception('Deposit canceled due to negative balance.');
             }
 
             $deposit = Transaction::create([
                 'receiver_id' => $validatedData['user_id'],
-                'sender_id'   => null,
-                'amount'      => $validatedData['amount'],
-                'status'      => 'completed',
-                'description' => $validatedData['description'] ?? 'Depósito na conta',
-                'type'        => 'deposit'
+                'sender_id' => null,
+                'amount' => $validatedData['amount'],
+                'status' => self::STATUS_COMPLETED,
+                'description' => $validatedData['description'] ?? 'Account deposit',
+                'type' => self::TYPE_DEPOSIT,
             ]);
 
             $user->increment('balance', $validatedData['amount']);
 
-            DB::commit();
+            Log::info('Deposit completed', [
+                'transaction_id' => $deposit->id,
+                'user_id' => $user->id,
+                'amount' => $validatedData['amount']
+            ]);
 
-            return new TransactionResource($deposit);
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw new Exception($e->getMessage(), 400);
-        }
+            return new TransactionResource($deposit->fresh(['receiver']));
+        });
     }
 
     public function reverse(Transaction $transaction)
     {
-        DB::beginTransaction();
-
-        try {
-            $sender = null;
-
-            if ($transaction->status === 'reversed') {
-                throw new Exception('A transação já sofreu a reversão!');
+        return DB::transaction(function () use ($transaction) {
+            if ($transaction->status === self::STATUS_REVERSED) {
+                throw new Exception('Transaction has already been reversed!');
             }
 
-            if ($transaction->type !== "deposit") {
-                $sender = User::findOrFail($transaction->sender_id);
-            }
-
+            $sender = $transaction->sender_id ? User::findOrFail($transaction->sender_id) : null;
             $receiver = User::findOrFail($transaction->receiver_id);
 
             if ($sender) {
@@ -195,22 +157,137 @@ class TransactionService
             $receiver->decrement('balance', $transaction->amount);
 
             $reverseTransaction = Transaction::create([
-                'sender_id'   => $receiver->id,
+                'sender_id' => $receiver->id,
                 'receiver_id' => $sender ? $sender->id : null,
-                'amount'      => $transaction->amount,
-                'status'      => 'reversed',
-                'description' => 'Reversão de transação ' . $transaction->id,
-                'type'        => 'reverse',
+                'amount' => $transaction->amount,
+                'status' => self::STATUS_REVERSED,
+                'description' => 'Reversal of transaction ' . $transaction->id,
+                'type' => self::TYPE_REVERSE,
             ]);
 
-            $transaction->update(['status' => 'reversed']);
+            $transaction->update(['status' => self::STATUS_REVERSED]);
 
-            DB::commit();
+            Log::info('Transaction reversed', [
+                'original_transaction_id' => $transaction->id,
+                'reversal_transaction_id' => $reverseTransaction->id,
+                'amount' => $transaction->amount
+            ]);
 
-            return new TransactionResource($reverseTransaction);
-        } catch (Exception $e) {
-            DB::rollBack();
-            throw new Exception($e->getMessage(), 400);
+            return new TransactionResource($reverseTransaction->fresh(['sender', 'receiver']));
+        });
+    }
+
+    public function getTransactionStats(?int $userId = null)
+    {
+        $query = Transaction::query();
+
+        if ($userId) {
+            $query->where(function ($q) use ($userId) {
+                $q->where('sender_id', $userId)
+                    ->orWhere('receiver_id', $userId);
+            });
+        }
+
+        $totalSent = clone $query;
+        $totalSent = $totalSent->where('sender_id', $userId)
+            ->where('status', self::STATUS_COMPLETED)
+            ->sum('amount');
+
+        $totalReceived = clone $query;
+        $totalReceived = $totalReceived->where('receiver_id', $userId)
+            ->where('status', self::STATUS_COMPLETED)
+            ->sum('amount');
+
+        $transactionCount = $query->count();
+
+        return [
+            'total_sent' => $totalSent,
+            'total_received' => $totalReceived,
+            'net_balance' => $totalReceived - $totalSent,
+            'transaction_count' => $transactionCount,
+            'last_transaction_date' => $query->max('created_at')
+        ];
+    }
+
+    private function validateTransferData(array $data)
+    {
+        $validator = Validator::make(
+            $data,
+            [
+                'sender_id' => ['required', 'exists:users,id'],
+                'receiver_id' => ['required', 'exists:users,id', 'different:sender_id'],
+                'amount' => ['required', 'numeric', 'min:0.01'],
+                'description' => ['required', 'string', 'max:255']
+            ]
+        );
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $validator->validated();
+    }
+
+    private function validateUpdateData(array $data)
+    {
+        $validator = Validator::make(
+            $data,
+            [
+                'status' => ['sometimes', 'string', 'in:' . implode(',', [
+                    self::STATUS_COMPLETED,
+                    self::STATUS_CANCELLED,
+                ])],
+                'description' => ['sometimes', 'string', 'max:255'],
+            ]
+        );
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $validator->validated();
+    }
+
+    private function validateDepositData(array $data)
+    {
+        $validator = Validator::make(
+            $data,
+            [
+                'user_id' => ['required', 'exists:users,id'],
+                'amount' => ['required', 'numeric', 'min:0.01'],
+                'description' => ['sometimes', 'string', 'max:255'],
+                'check_balance' => ['sometimes', 'boolean']
+            ]
+        );
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $validator->validated();
+    }
+
+    private function verifyTransferEligibility(User $sender, User $receiver, float $amount)
+    {
+        if ($amount > $sender->balance) {
+            throw new Exception("Insufficient balance for this transfer");
+        }
+
+        if ($receiver->balance < 0) {
+            throw new Exception('Transfer cancelled due to receiver\'s negative balance.');
+        }
+    }
+
+    private function reverseTransactionBalances(Transaction $transaction)
+    {
+        if ($transaction->sender_id) {
+            $sender = User::findOrFail($transaction->sender_id);
+            $sender->increment('balance', $transaction->amount);
+        }
+
+        if ($transaction->receiver_id) {
+            $receiver = User::findOrFail($transaction->receiver_id);
+            $receiver->decrement('balance', $transaction->amount);
         }
     }
 }

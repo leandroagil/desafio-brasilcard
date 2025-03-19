@@ -4,13 +4,13 @@ namespace App\Services;
 
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Validation\Rules\Password;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Auth\AuthenticationException;
 
 class AuthService
 {
@@ -21,46 +21,89 @@ class AuthService
         $this->userService = $userService;
     }
 
-    public function registerUser(array $data)
+    public function registerUser(array $data): array
     {
-        $user = $this->userService->createUser($data);
-        return $user;
+        try {
+            $user = $this->userService->createUser($data);
+            $token = $user->createToken('registration_token');
+
+            return [
+                'token' => $token->plainTextToken,
+                'user' => new UserResource($user),
+                'message' => 'User registered successfully'
+            ];
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('User registration failed', [
+                'email' => $data['email'] ?? null,
+                'error' => $e->getMessage()
+            ]);
+
+            throw new HttpException(500, 'Registration failed: ' . $e->getMessage());
+        }
     }
 
-    public function loginUser(array $data)
+    public function loginUser(array $data): array
+    {
+        $validatedData = $this->validateLoginData($data);
+
+        try {
+            if (!Auth::attempt([
+                'email' => $validatedData['email'],
+                'password' => $validatedData['password']
+            ])) {
+                Log::info('Failed login attempt', ['email' => $validatedData['email']]);
+                throw new AuthenticationException('Invalid email or password');
+            }
+
+            $user = User::where('email', $validatedData['email'])->firstOrFail();
+            $tokenResult = $user->createToken('access_token');
+
+            $this->logSuccessfulLogin($user);
+
+            return [
+                'token' => $tokenResult->plainTextToken,
+                'token_type' => 'Bearer',
+                'expires_at' => now()->addDays(config('sanctum.expiration', 1)),
+                'user' => new UserResource($user),
+            ];
+        } catch (ModelNotFoundException $e) {
+            Log::error('User not found during login', ['email' => $validatedData['email']]);
+            throw new AuthenticationException('Invalid email or password');
+        } catch (AuthenticationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Login failed', [
+                'email' => $validatedData['email'],
+                'error' => $e->getMessage()
+            ]);
+            throw new HttpException(500, 'Login failed: ' . $e->getMessage());
+        }
+    }
+
+    private function validateLoginData(array $data): array
     {
         $validator = Validator::make($data, [
-            'email' => ['required', 'email:rfc'],
-            'password' => ['required'],
+            'email' => ['required', 'email:rfc', 'exists:users,email'],
+            'password' => ['required', 'string'],
+            'remember_me' => ['boolean'],
         ]);
 
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
 
-        $credentials = ['email' => $data['email'], 'password' => $data['password']];
-
-        if (!Auth::attempt($credentials)) {
-            throw new HttpException(401, 'Email ou senha inválidos');
-        }
-
-        $user = User::where('email', $data['email'])->first();
-        $token = $user->createToken('access_token');
-
-        return [
-            'token' => $token,
-            'user' => new UserResource($user),
-        ];
+        return $validator->validated();
     }
 
-    private function validateUser(array $data)
+    private function logSuccessfulLogin(User $user): void
     {
-        return Validator::make($data, [
-            'firstName' => ['required', 'string', 'max:255'],
-            'lastName' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email:rfc', Rule::unique('users')],
-            'password' => ['required', Password::min(8)],
-            'balance' => ['required', 'numeric', 'min:0'],
+        Log::info('User logged in successfully', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent()
         ]);
     }
 }

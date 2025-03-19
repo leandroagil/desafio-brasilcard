@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('sender_id')->nullable();
-            $table->unsignedBigInteger('receiver_id');
+            $table->unsignedBigInteger('receiver_id')->nullable();;
             $table->decimal('amount', 10, 2);
             $table->string('description')->nullable();
             $table->enum('status', ['cancelled', 'completed', 'reversed'])->default('completed');

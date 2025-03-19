@@ -22,9 +22,9 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         try {
-            $user = $this->authService->registerUser($request->all());
-            Log::info('Usuário registrado com sucesso', ['user' => $user]);
-            return $this->response('Usuário registrado com sucesso!', 201, new UserResource($user));
+            $data = $this->authService->registerUser($request->all());
+            Log::info('Usuário registrado com sucesso', [$data]);
+            return $this->response('Usuário registrado com sucesso!', 201, $data);
         } catch (ValidationException $e) {
             Log::warning('Erro de validação ao registrar usuário', ['errors' => $e->errors()]);
             return $this->error('Erro de validação', 422, $e->errors());

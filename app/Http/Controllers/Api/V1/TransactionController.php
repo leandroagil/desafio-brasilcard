@@ -39,7 +39,7 @@ class TransactionController extends Controller
     public function store(Request $request)
     {
         try {
-            $transaction = $this->transactionService->store($request->all());
+            $transaction = $this->transactionService->transfer($request->all());
             Log::info('Transferência realizada com sucesso', ['transaction' => $transaction]);
             return $this->response('Transferência realizada com sucesso!', 201, $transaction);
         } catch (ValidationException $e) {
