@@ -2,39 +2,19 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Http\Resources\BaseResource;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Resources\Json\JsonResource;
 
-class UserResource extends JsonResource
+class UserResource extends BaseResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
-        $fullName = "{$this->firstName} {$this->lastName}";
-
-        return [
-            'id' => $this->id,
+        return array_merge(parent::toArray($request), [
             'firstName' => $this->firstName,
             'lastName' => $this->lastName,
-            'fullName' => $fullName,
+            'fullName' => "{$this->firstName} {$this->lastName}",
             'email' => $this->email,
-            'balance' => $this->protectBalance(),
-        ];
-    }
-
-    private function protectBalance()
-    {
-        $authenticatedUser = Auth::user();
-
-        if (!$authenticatedUser || $this->id !== $authenticatedUser->id) {
-            return 'Hidden';
-        }
-
-        return "R$ " . number_format($this->balance, 2, ',', '.');
+            'balance' => $this->protectAmount($this->balance, $this->id, $this->id),
+        ]);
     }
 }

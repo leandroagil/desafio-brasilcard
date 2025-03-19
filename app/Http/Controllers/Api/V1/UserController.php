@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\UserResource;
-use App\Models\User;
 use App\Services\UserService;
+use App\Models\User;
+
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -35,14 +35,7 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
-        try {
-            $updatedUser = $this->userService->updateUser($user, $request->all());
-            return $this->response('Usuário atualizado com sucesso!', 200, new UserResource($updatedUser));
-        } catch (ValidationException $e) {
-            return $this->error('Erro de validação', 422, $e->errors());
-        } catch (\Exception $e) {
-            return $this->error('Erro ao atualizar usuário', 400, ['error' => $e->getMessage()]);
-        }
+        //
     }
 
     public function destroy(User $user)

@@ -5,11 +5,13 @@ namespace App\Services;
 use App\Http\Resources\V1\TransactionResource;
 use App\Models\Transaction;
 use App\Models\User;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use Exception;
 use Illuminate\Support\Facades\Log;
+
+use Exception;
 
 class TransactionService
 {
@@ -23,10 +25,7 @@ class TransactionService
 
     public function getAllTransactions(int $perPage = 15)
     {
-        $transactions = Transaction::with(['sender', 'receiver'])
-            ->latest()
-            ->paginate($perPage);
-
+        $transactions = Transaction::with(['sender', 'receiver'])->latest()->paginate($perPage);
         return TransactionResource::collection($transactions);
     }
 
@@ -52,7 +51,7 @@ class TransactionService
             $sender->decrement('balance', $validatedData['amount']);
             $receiver->increment('balance', $validatedData['amount']);
 
-            Log::info('Transfer completed', [
+            Log::info('Transferência concluída', [
                 'transaction_id' => $transaction->id,
                 'sender_id' => $sender->id,
                 'receiver_id' => $receiver->id,
@@ -65,26 +64,7 @@ class TransactionService
 
     public function update(Transaction $transaction, array $data)
     {
-        return DB::transaction(function () use ($transaction, $data) {
-            $validatedData = $this->validateUpdateData($data);
-
-            $originalStatus = $transaction->status;
-            $newStatus = $validatedData['status'] ?? $originalStatus;
-
-            if ($originalStatus === self::STATUS_COMPLETED && $newStatus === self::STATUS_CANCELLED) {
-                $this->reverseTransactionBalances($transaction);
-            }
-
-            $transaction->update($validatedData);
-
-            Log::info('Transaction updated', [
-                'transaction_id' => $transaction->id,
-                'previous_status' => $originalStatus,
-                'new_status' => $newStatus
-            ]);
-
-            return new TransactionResource($transaction->fresh(['sender', 'receiver']));
-        });
+        //
     }
 
     public function destroy(Transaction $transaction)
@@ -100,7 +80,7 @@ class TransactionService
             $transactionId = $transaction->id;
             $result = $transaction->delete();
 
-            Log::info('Transaction deleted', [
+            Log::info('Transação removida', [
                 'transaction_id' => $transactionId
             ]);
 
@@ -115,8 +95,8 @@ class TransactionService
 
             $user = User::findOrFail($validatedData['user_id']);
 
-            if (isset($validatedData['check_balance']) && $validatedData['check_balance'] && $user->balance < 0) {
-                throw new Exception('Deposit canceled due to negative balance.');
+            if ($user->balance < 0) {
+                throw new Exception('Depósito cancelado devido ao saldo negativo.');
             }
 
             $deposit = Transaction::create([
@@ -124,7 +104,7 @@ class TransactionService
                 'sender_id' => null,
                 'amount' => $validatedData['amount'],
                 'status' => self::STATUS_COMPLETED,
-                'description' => $validatedData['description'] ?? 'Account deposit',
+                'description' => $validatedData['description'] ?? 'Depósito na conta.',
                 'type' => self::TYPE_DEPOSIT,
             ]);
 
@@ -144,7 +124,7 @@ class TransactionService
     {
         return DB::transaction(function () use ($transaction) {
             if ($transaction->status === self::STATUS_REVERSED) {
-                throw new Exception('Transaction has already been reversed!');
+                throw new Exception('A transação já foi revertida!');
             }
 
             $sender = $transaction->sender_id ? User::findOrFail($transaction->sender_id) : null;
@@ -161,13 +141,13 @@ class TransactionService
                 'receiver_id' => $sender ? $sender->id : null,
                 'amount' => $transaction->amount,
                 'status' => self::STATUS_REVERSED,
-                'description' => 'Reversal of transaction ' . $transaction->id,
+                'description' => 'Transação revertida; original: ' . $transaction->id,
                 'type' => self::TYPE_REVERSE,
             ]);
 
             $transaction->update(['status' => self::STATUS_REVERSED]);
 
-            Log::info('Transaction reversed', [
+            Log::info('Transação revertida', [
                 'original_transaction_id' => $transaction->id,
                 'reversal_transaction_id' => $reverseTransaction->id,
                 'amount' => $transaction->amount
@@ -175,38 +155,6 @@ class TransactionService
 
             return new TransactionResource($reverseTransaction->fresh(['sender', 'receiver']));
         });
-    }
-
-    public function getTransactionStats(?int $userId = null)
-    {
-        $query = Transaction::query();
-
-        if ($userId) {
-            $query->where(function ($q) use ($userId) {
-                $q->where('sender_id', $userId)
-                    ->orWhere('receiver_id', $userId);
-            });
-        }
-
-        $totalSent = clone $query;
-        $totalSent = $totalSent->where('sender_id', $userId)
-            ->where('status', self::STATUS_COMPLETED)
-            ->sum('amount');
-
-        $totalReceived = clone $query;
-        $totalReceived = $totalReceived->where('receiver_id', $userId)
-            ->where('status', self::STATUS_COMPLETED)
-            ->sum('amount');
-
-        $transactionCount = $query->count();
-
-        return [
-            'total_sent' => $totalSent,
-            'total_received' => $totalReceived,
-            'net_balance' => $totalReceived - $totalSent,
-            'transaction_count' => $transactionCount,
-            'last_transaction_date' => $query->max('created_at')
-        ];
     }
 
     private function validateTransferData(array $data)
@@ -256,7 +204,6 @@ class TransactionService
                 'user_id' => ['required', 'exists:users,id'],
                 'amount' => ['required', 'numeric', 'min:0.01'],
                 'description' => ['sometimes', 'string', 'max:255'],
-                'check_balance' => ['sometimes', 'boolean']
             ]
         );
 
@@ -270,11 +217,11 @@ class TransactionService
     private function verifyTransferEligibility(User $sender, User $receiver, float $amount)
     {
         if ($amount > $sender->balance) {
-            throw new Exception("Insufficient balance for this transfer");
+            throw new Exception("Saldo insuficiente para transferência.");
         }
 
         if ($receiver->balance < 0) {
-            throw new Exception('Transfer cancelled due to receiver\'s negative balance.');
+            throw new Exception('Transferência cancelada devido ao saldo negativo do recebedor.');
         }
     }
 
