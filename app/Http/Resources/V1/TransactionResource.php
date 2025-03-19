@@ -3,56 +3,53 @@
 namespace App\Http\Resources\V1;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class TransactionResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(Request $request): array
+    public function toArray(Request $request): ?array
     {
-        $transactionAmountInReais = "R$ " . number_format($this->amount, 2, ',', '.');
-        $receiverTotalAmount = 0;
-        $senderTotalAmount = 0;
-
-        $senderFullName = $this->sender ? "{$this->sender->firstName} {$this->sender->lastName}" : 'Unknown';
-        $receiverFullName = $this->receiver ? "{$this->receiver->firstName} {$this->receiver->lastName}" : 'Unknown';
-
-        if ($this->receiver) {
-            $receiverTotalAmount = "R$ " . number_format($this->receiver->balance, 2, ',', '.');
-        }
-
-        if ($this->sender) {
-            $senderTotalAmount = "R$ " . number_format($this->sender->balance, 2, ',', '.');
-        }
+        $authenticatedUser = Auth::user();
+        $amount = $this->protectAmount();
 
         return [
             'id'          => $this->id,
-            'amount'      => $transactionAmountInReais,
+            'amount'      => $amount,
             'description' => $this->description,
             'type'        => $this->type,
             'status'      => $this->status,
 
-            'sender'    => $this->sender ? [
-                'id' => $this->sender->id,
-                'firstName' => $this->sender->firstName,
-                'lastName' => $this->sender->lastName,
-                'fullName' => $senderFullName,
-                'email' => $this->sender->email,
-                'balance' => $senderTotalAmount,
-            ] : null,
-
-            'receiver'  => $this->receiver ? [
-                'id' => $this->receiver->id,
-                'firstName' => $this->receiver->firstName,
-                'lastName' => $this->receiver->lastName,
-                'fullName' => $receiverFullName,
-                'email' => $this->receiver->email,
-                'balance' => $receiverTotalAmount,
-            ] : null,
+            'sender'    => $this->formatUser($this->sender, $authenticatedUser),
+            'receiver'  => $this->formatUser($this->receiver, $authenticatedUser),
         ];
+    }
+
+    private function formatUser($user, $authenticatedUser)
+    {
+        if (!$user) {
+            return null;
+        }
+
+        $isAuthenticatedUser = $user->id === $authenticatedUser->id;
+
+        return [
+            'id' => $user->id,
+            'firstName' => $user->firstName,
+            'lastName' => $user->lastName,
+            'fullName' => "{$user->firstName} {$user->lastName}",
+            'balance' => $isAuthenticatedUser ? "R$ " . number_format($user->balance, 2, ',', '.') : 'Hidden',
+        ];
+    }
+
+    private function protectAmount()
+    {
+        $authenticatedUser = Auth::user();
+
+        if (!$authenticatedUser || ($this->sender_id !== $authenticatedUser->id && $this->receiver_id !== $authenticatedUser->id)) {
+            return 'Hidden';
+        }
+
+        return "R$ " . number_format($this->amount, 2, ',', '.');
     }
 }

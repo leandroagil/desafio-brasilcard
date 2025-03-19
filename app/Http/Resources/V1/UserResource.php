@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserResource extends JsonResource
@@ -14,7 +15,6 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $amountInReais = "R$ " . number_format($this->balance, 2, ',', '.');
         $fullName = "{$this->firstName} {$this->lastName}";
 
         return [
@@ -23,8 +23,18 @@ class UserResource extends JsonResource
             'lastName' => $this->lastName,
             'fullName' => $fullName,
             'email' => $this->email,
-            'password' => $this->password,
-            'balance' => $amountInReais,
+            'balance' => $this->protectBalance(),
         ];
+    }
+
+    private function protectBalance()
+    {
+        $authenticatedUser = Auth::user();
+
+        if (!$authenticatedUser || $this->id !== $authenticatedUser->id) {
+            return 'Hidden';
+        }
+
+        return "R$ " . number_format($this->balance, 2, ',', '.');
     }
 }
