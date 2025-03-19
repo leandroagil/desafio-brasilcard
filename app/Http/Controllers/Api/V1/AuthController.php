@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\AuthService;
+use App\Exceptions\AuthException;
 
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-
-use Symfony\Component\HttpKernel\Exception\HttpException;
+use Illuminate\Http\JsonResponse;
 
 class AuthController extends Controller
 {
@@ -19,29 +19,43 @@ class AuthController extends Controller
         $this->authService = $authService;
     }
 
-    public function register(Request $request)
+    public function register(Request $request): JsonResponse
     {
         try {
             $data = $this->authService->registerUser($request->all());
-            return $this->response('Usuário registrado com sucesso!', 201, $data);
+            return $this->response('User registered successfully', 201, $data);
         } catch (ValidationException $e) {
-            return $this->error('Erro de validação', 422, $e->errors());
+            return $this->error('Validation error', 422, ['errors' => $e->errors()]);
+        } catch (AuthException $e) {
+            return $this->error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
-            return $this->error('Erro ao registrar usuário', 400, ['error' => $e->getMessage()]);
+            return $this->error('Error registering user', 500, ['error' => $e->getMessage()]);
         }
     }
 
-    public function login(Request $request)
+    public function login(Request $request): JsonResponse
     {
         try {
             $authData = $this->authService->loginUser($request->all());
-            return $this->response('Login realizado com sucesso!', 200, $authData);
+            return $this->response('Login successful', 200, $authData);
         } catch (ValidationException $e) {
-            return $this->error('Erro de validação', 422, $e->errors());
-        } catch (HttpException $e) {
-            return $this->error($e->getMessage(), $e->getStatusCode());
+            return $this->error('Validation error', 422, ['errors' => $e->errors()]);
+        } catch (AuthException $e) {
+            return $this->error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
-            return $this->error('Erro ao fazer login', 400, ['error' => $e->getMessage()]);
+            return $this->error('Error logging in', 500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function logout(Request $request): JsonResponse
+    {
+        try {
+            $this->authService->logoutUser($request->user());
+            return $this->response('Logout successful', 200);
+        } catch (AuthException $e) {
+            return $this->error($e->getMessage(), $e->getCode());
+        } catch (\Exception $e) {
+            return $this->error('Error logging out', 500, ['error' => $e->getMessage()]);
         }
     }
 }

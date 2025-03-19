@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\UserException;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -13,42 +15,122 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 use Exception;
+use Throwable;
 
 class UserService
 {
     public function getAllUsers(int $perPage = 15)
     {
-        return UserResource::collection(User::paginate($perPage));
+        try {
+            return UserResource::collection(User::paginate($perPage));
+        } catch (Exception $e) {
+            Log::error('Error fetching users', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw new Exception("Error retrieving users", 500);
+        }
+    }
+
+    public function getUserById(int $id)
+    {
+        try {
+            $user = User::find($id);
+
+            if (!$user) {
+                throw UserException::notFound();
+            }
+
+            return new UserResource($user);
+        } catch (UserException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            Log::error('Error fetching user', [
+                'user_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw new Exception("Error retrieving user", 500);
+        }
     }
 
     public function createUser(array $data)
     {
-        $validatedData = $this->validateUserData($data, 'create');
+        try {
+            $validatedData = $this->validateUserData($data, 'create');
 
-        return DB::transaction(function () use ($validatedData) {
-            return User::create($validatedData);
-        });
+            $user = DB::transaction(function () use ($validatedData) {
+                return User::create($validatedData);
+            });
+
+            return new UserResource($user);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            Log::error('Error creating user', [
+                'data' => array_diff_key($data, array_flip(['password'])),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            throw UserException::create();
+        }
     }
 
     public function updateUser(User $user, array $data)
     {
-        //
+        try {
+            $validatedData = $this->validateUserData($data, 'update', $user);
+
+            $updated = DB::transaction(function () use ($user, $validatedData) {
+                return $user->update($validatedData);
+            });
+
+            if (!$updated) {
+                throw UserException::update();
+            }
+
+            $user->refresh();
+
+            return new UserResource($user);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (UserException $e) {
+            throw $e;
+        } catch (Exception $e) {
+            Log::error('Error updating user', [
+                'user_id' => $user->id,
+                'data' => array_diff_key($data, array_flip(['password'])),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            throw UserException::update();
+        }
     }
 
     public function deleteUser(User $user)
     {
         try {
-            return DB::transaction(function () use ($user) {
+            $deleted = DB::transaction(function () use ($user) {
                 return $user->delete();
             });
-        } catch (Exception $e) {
-            Log::error('Erro ao excluir usuário', [
+
+            if (!$deleted) {
+                throw UserException::delete();
+            }
+
+            return true;
+        } catch (UserException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            Log::error('Error deleting user', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
-            throw new Exception('Erro ao excluir usuário: ' . $e->getMessage());
+            throw UserException::delete();
         }
     }
 
@@ -57,8 +139,14 @@ class UserService
         $rules = [
             'firstName' => ['string', 'max:255'],
             'lastName'  => ['string', 'max:255'],
-            'email'     => ['email:rfc'],
-            'password'  => [Password::min(8)->mixedCase()->numbers()],
+            'email'     => ['email:rfc,dns'],
+            'password'  => [
+                Password::min(8)
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols()
+                    ->uncompromised()
+            ],
             'balance'   => ['numeric', 'min:0'],
         ];
 
@@ -76,7 +164,9 @@ class UserService
                 return array_merge(['sometimes'], $rule);
             }, $rules);
 
-            $rules['email'][] = Rule::unique('users')->ignore($user->id);
+            if ($user) {
+                $rules['email'][] = Rule::unique('users')->ignore($user->id);
+            }
         }
 
         $validator = Validator::make($data, $rules);

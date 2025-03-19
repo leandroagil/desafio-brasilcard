@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AuthException;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
 
@@ -9,9 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Auth\AuthenticationException;
-
-use Symfony\Component\HttpKernel\Exception\HttpException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthService
 {
@@ -29,49 +28,57 @@ class AuthService
         try {
             $user = $this->userService->createUser($data);
 
+            $user->tokens()->delete();
+            $tokenResult = $user->createToken(self::AUTH_TOKEN_KEY);
+
+            Log::info('User registered successfully', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
             return [
                 'user' => new UserResource($user),
-                'message' => 'Usuário registrado com sucesso'
+                'token' => $tokenResult->plainTextToken,
+                'token_type' => 'Bearer',
+                'expires_at' => now()->addDays(config('sanctum.expiration', 1)),
             ];
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
-            Log::error('Erro ao registrar usuário', [
+            Log::error('Error registering user', [
                 'email' => $data['email'] ?? null,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
-            throw new HttpException(500, 'Erro ao registrar usuário: ' . $e->getMessage());
+            throw AuthException::register();
         }
     }
 
     public function loginUser(array $data): array
     {
-        $validatedData = $this->validateLoginData($data);
-        $credentials = [
-            'email' => $validatedData['email'],
-            'password' => $validatedData['password']
-        ];
-
         try {
+            $validatedData = $this->validateLoginData($data);
             $user = User::where('email', $validatedData['email'])->first();
 
-            if (!$user) {
-                Log::error('Usuário não encontrado', ['email' => $validatedData['email']]);
-                throw new AuthenticationException('Email ou senha inválidos');
+            if (!$user || !Auth::validate([
+                'email' => $validatedData['email'],
+                'password' => $validatedData['password']
+            ])) {
+                Log::warning('Login attempt failed - Invalid credentials', [
+                    'email' => $validatedData['email'],
+                    'ip' => request()->ip()
+                ]);
+
+                throw AuthException::invalidCredentials();
             }
 
-            if (!Auth::attempt($credentials)) {
-                Log::info('Erro ao logar', ['email' => $validatedData['email']]);
-                throw new AuthenticationException('Email ou senha inválidos');
-            }
-
-            $user = User::where('email', $validatedData['email'])->firstOrFail();
             $user->tokens()->delete();
-
             $tokenResult = $user->createToken(self::AUTH_TOKEN_KEY);
 
-            Log::info('Usuário logado com sucesso', [
+            Log::info('User logged in successfully with new token', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'ip' => request()->ip(),
@@ -84,23 +91,74 @@ class AuthService
                 'expires_at' => now()->addDays(config('sanctum.expiration', 1)),
                 'user' => new UserResource($user),
             ];
-        } catch (AuthenticationException $e) {
+        } catch (AuthException | ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
-            Log::error('Erro ao logar', [
-                'email' => $validatedData['email'],
-                'error' => $e->getMessage()
+            Log::error('Error during login', [
+                'email' => $data['email'] ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
-            throw new HttpException(500, 'Erro ao logar: ' . $e->getMessage());
+
+            throw AuthException::login();
+        }
+    }
+
+    public function logoutUser(User $user): bool
+    {
+        try {
+            $user->tokens()->delete();
+
+            Log::info('User logged out successfully', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => request()->ip()
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Error during logout', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            throw AuthException::logout();
+        }
+    }
+
+    public function validateToken(string $token): ?User
+    {
+        try {
+            $accessToken = PersonalAccessToken::findToken($token);
+
+            if (!$accessToken) {
+                return null;
+            }
+
+            $user = $accessToken->tokenable;
+
+            if ($user instanceof User) {
+                return $user;
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Error validating token', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return null;
         }
     }
 
     private function validateLoginData(array $data): array
     {
         $validator = Validator::make($data, [
-            'email' => ['required', 'email:rfc', 'exists:users,email'],
+            'email' => ['required', 'email:rfc,dns', 'exists:users,email'],
             'password' => ['required', 'string'],
-            'remember_me' => ['boolean'],
+            'remember_me' => ['sometimes', 'boolean'],
         ]);
 
         if ($validator->fails()) {

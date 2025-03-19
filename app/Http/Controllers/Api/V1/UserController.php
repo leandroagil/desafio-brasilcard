@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\UserException;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\V1\UserResource;
 use App\Services\UserService;
 use App\Models\User;
 
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -18,33 +20,65 @@ class UserController extends Controller
         $this->userService = $userService;
     }
 
-    public function index()
+    public function index(): JsonResponse
     {
         try {
-            $users = $this->userService->getAllUsers();
-            return $this->response('Usuários encontrados!', 200, $users);
+            $users = $this->userService->getAllUsers(15);
+            return $this->response('Users found successfully', 200, $users);
         } catch (\Exception $e) {
-            return $this->error('Erro ao buscar usuários', 400, ['error' => $e->getMessage()]);
+            return $this->error('Error fetching users', 500, ['error' => $e->getMessage()]);
         }
     }
 
-    public function show(User $user)
+    public function show(int $id): JsonResponse
     {
-        return $this->response('Usuário encontrado!', 200, new UserResource($user));
+        try {
+            $user = $this->userService->getUserById($id);
+            return $this->response('User found successfully', 200, $user);
+        } catch (UserException $e) {
+            return $this->error('User not found', $e->getCode(), ['error' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            return $this->error('Error fetching user', 500, ['error' => $e->getMessage()]);
+        }
     }
 
-    public function update(Request $request, User $user)
+    public function store(Request $request): JsonResponse
     {
-        //
+        try {
+            $user = $this->userService->createUser($request->all());
+            return $this->response('User created successfully', 201, $user);
+        } catch (ValidationException $e) {
+            return $this->error('Validation failed', 422, ['errors' => $e->errors()]);
+        } catch (UserException $e) {
+            return $this->error('Error creating user', $e->getCode(), ['error' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            return $this->error('Unexpected error', 500, ['error' => $e->getMessage()]);
+        }
     }
 
-    public function destroy(User $user)
+    public function update(Request $request, User $user): JsonResponse
+    {
+        try {
+            $updatedUser = $this->userService->updateUser($user, $request->all());
+            return $this->response('User updated successfully', 200, $updatedUser);
+        } catch (ValidationException $e) {
+            return $this->error('Validation failed', 422, ['errors' => $e->errors()]);
+        } catch (UserException $e) {
+            return $this->error('Error updating user', $e->getCode(), ['error' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            return $this->error('Unexpected error', 500, ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function destroy(User $user): JsonResponse
     {
         try {
             $this->userService->deleteUser($user);
-            return $this->response('Usuário removido com sucesso!', 200);
+            return $this->response('User deleted successfully', 200);
+        } catch (UserException $e) {
+            return $this->error('Error deleting user', $e->getCode(), ['error' => $e->getMessage()]);
         } catch (\Exception $e) {
-            return $this->error('Erro ao remover usuário', 400, ['error' => $e->getMessage()]);
+            return $this->error('Unexpected error', 500, ['error' => $e->getMessage()]);
         }
     }
 }
