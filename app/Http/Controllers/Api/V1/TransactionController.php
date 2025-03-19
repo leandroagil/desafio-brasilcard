@@ -31,11 +31,6 @@ class TransactionController extends Controller
         }
     }
 
-    public function create()
-    {
-        return $this->error('Método não disponível', 405);
-    }
-
     public function store(Request $request)
     {
         try {
@@ -55,11 +50,6 @@ class TransactionController extends Controller
     {
         Log::info('Transação encontrada', ['transaction' => $transaction]);
         return $this->response('Transação encontrada!', 200, new TransactionResource($transaction));
-    }
-
-    public function edit(string $id)
-    {
-        return $this->error('Método não disponível', 405);
     }
 
     public function update(Request $request, Transaction $transaction)
