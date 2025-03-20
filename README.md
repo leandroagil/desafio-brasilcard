@@ -98,10 +98,10 @@ Payload de exemplo:
 
 ```json
 {
-    "name": "Usuário Teste",
-    "email": "teste@exemplo.com",
-    "password": "senha123",
-    "password_confirmation": "senha123"
+    "firstName": "João",
+    "lastName": "Silva",
+    "password": "Joao1234#",
+    "email": "joaozinho@gmail.com"
 }
 ```
 
@@ -115,8 +115,8 @@ Payload de exemplo:
 
 ```json
 {
-    "email": "teste@exemplo.com",
-    "password": "senha123"
+    "email": "joaozinho@gmail.com",
+    "password": "Joao1234#"
 }
 ```
 
