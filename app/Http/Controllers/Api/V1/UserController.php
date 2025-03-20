@@ -56,18 +56,9 @@ class UserController extends Controller
         }
     }
 
-    public function update(Request $request, User $user): JsonResponse
+    public function update(Request $request, User $user)
     {
-        try {
-            $updatedUser = $this->userService->updateUser($user, $request->all());
-            return $this->response('User updated successfully', 200, $updatedUser);
-        } catch (ValidationException $e) {
-            return $this->error('Validation failed', 422, ['errors' => $e->errors()]);
-        } catch (UserException $e) {
-            return $this->error('Error updating user', $e->getCode(), ['error' => $e->getMessage()]);
-        } catch (\Exception $e) {
-            return $this->error('Unexpected error', 500, ['error' => $e->getMessage()]);
-        }
+        //
     }
 
     public function destroy(User $user): JsonResponse

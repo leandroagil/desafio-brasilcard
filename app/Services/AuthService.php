@@ -32,15 +32,15 @@ class AuthService
             $tokenResult = $user->createToken(self::AUTH_TOKEN_KEY);
 
             Log::info('User registered successfully', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'ip' => request()->ip(),
+                'user_id'    => $user->id,
+                'email'      => $user->email,
+                'ip'         => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);
 
             return [
-                'user' => new UserResource($user),
-                'token' => $tokenResult->plainTextToken,
+                'user'       => new UserResource($user),
+                'token'      => $tokenResult->plainTextToken,
                 'token_type' => 'Bearer',
                 'expires_at' => now()->addDays(config('sanctum.expiration', 1)),
             ];
@@ -64,12 +64,12 @@ class AuthService
             $user = User::where('email', $validatedData['email'])->first();
 
             if (!$user || !Auth::validate([
-                'email' => $validatedData['email'],
+                'email'    => $validatedData['email'],
                 'password' => $validatedData['password']
             ])) {
                 Log::warning('Login attempt failed - Invalid credentials', [
                     'email' => $validatedData['email'],
-                    'ip' => request()->ip()
+                    'ip'    => request()->ip()
                 ]);
 
                 throw AuthException::invalidCredentials();
@@ -79,17 +79,17 @@ class AuthService
             $tokenResult = $user->createToken(self::AUTH_TOKEN_KEY);
 
             Log::info('User logged in successfully with new token', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'ip' => request()->ip(),
+                'user_id'    => $user->id,
+                'email'      => $user->email,
+                'ip'         => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);
 
             return [
-                'token' => $tokenResult->plainTextToken,
+                'token'      => $tokenResult->plainTextToken,
                 'token_type' => 'Bearer',
                 'expires_at' => now()->addDays(config('sanctum.expiration', 1)),
-                'user' => new UserResource($user),
+                'user'       => new UserResource($user),
             ];
         } catch (AuthException | ValidationException $e) {
             throw $e;
@@ -111,16 +111,16 @@ class AuthService
 
             Log::info('User logged out successfully', [
                 'user_id' => $user->id,
-                'email' => $user->email,
-                'ip' => request()->ip()
+                'email'   => $user->email,
+                'ip'      => request()->ip()
             ]);
 
             return true;
         } catch (\Exception $e) {
             Log::error('Error during logout', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
             ]);
 
             throw AuthException::logout();
@@ -156,8 +156,8 @@ class AuthService
     private function validateLoginData(array $data): array
     {
         $validator = Validator::make($data, [
-            'email' => ['required', 'email:rfc,dns', 'exists:users,email'],
-            'password' => ['required', 'string'],
+            'email'       => ['required', 'email:rfc,dns', 'exists:users,email'],
+            'password'    => ['required', 'string'],
             'remember_me' => ['sometimes', 'boolean'],
         ]);
 

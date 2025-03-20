@@ -47,8 +47,8 @@ class UserService
         } catch (Exception $e) {
             Log::error('Error fetching user', [
                 'user_id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
             ]);
             throw new Exception("Error retrieving user", 500);
         }
@@ -68,44 +68,12 @@ class UserService
             throw $e;
         } catch (Exception $e) {
             Log::error('Error creating user', [
-                'data' => array_diff_key($data, array_flip(['password'])),
+                'data'  => array_diff_key($data, array_flip(['password'])),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
             throw UserException::create();
-        }
-    }
-
-    public function updateUser(User $user, array $data)
-    {
-        try {
-            $validatedData = $this->validateUserData($data, 'update', $user);
-
-            $updated = DB::transaction(function () use ($user, $validatedData) {
-                return $user->update($validatedData);
-            });
-
-            if (!$updated) {
-                throw UserException::update();
-            }
-
-            $user->refresh();
-
-            return new UserResource($user);
-        } catch (ValidationException $e) {
-            throw $e;
-        } catch (UserException $e) {
-            throw $e;
-        } catch (Exception $e) {
-            Log::error('Error updating user', [
-                'user_id' => $user->id,
-                'data' => array_diff_key($data, array_flip(['password'])),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            throw UserException::update();
         }
     }
 
@@ -126,8 +94,8 @@ class UserService
         } catch (Throwable $e) {
             Log::error('Error deleting user', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error'   => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
             ]);
 
             throw UserException::delete();

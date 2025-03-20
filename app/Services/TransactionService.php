@@ -84,12 +84,12 @@ class TransactionService
                 $this->verifyTransferEligibility($sender, $receiver, $validatedData['amount']);
 
                 $transaction = Transaction::create([
-                    'sender_id' => $validatedData['sender_id'],
+                    'sender_id'   => $validatedData['sender_id'],
                     'receiver_id' => $validatedData['receiver_id'],
-                    'amount' => $validatedData['amount'],
+                    'amount'      => $validatedData['amount'],
                     'description' => $validatedData['description'],
-                    'status' => self::STATUS_COMPLETED,
-                    'type' => self::TYPE_TRANSFER,
+                    'status'      => self::STATUS_COMPLETED,
+                    'type'        => self::TYPE_TRANSFER,
                 ]);
 
                 $sender->decrement('balance', $validatedData['amount']);
@@ -97,9 +97,9 @@ class TransactionService
 
                 Log::info('Transfer completed', [
                     'transaction_id' => $transaction->id,
-                    'sender_id' => $sender->id,
-                    'receiver_id' => $receiver->id,
-                    'amount' => $validatedData['amount']
+                    'sender_id'      => $sender->id,
+                    'receiver_id'    => $receiver->id,
+                    'amount'         => $validatedData['amount']
                 ]);
 
                 return new TransactionResource($transaction->fresh(['sender', 'receiver']));
@@ -108,14 +108,14 @@ class TransactionService
             throw $e;
         } catch (ModelNotFoundException $e) {
             Log::error('User not found in transfer', [
-                'data' => $data,
+                'data'  => $data,
                 'error' => $e->getMessage()
             ]);
 
             throw TransactionException::invalidTransfer();
         } catch (Exception $e) {
             Log::error('Error creating transfer', [
-                'data' => $data,
+                'data'  => $data,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
