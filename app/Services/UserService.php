@@ -31,29 +31,6 @@ class UserService
         }
     }
 
-    public function getUserById(int $id)
-    {
-        try {
-            $user = User::find($id);
-
-            if (!$user) {
-                throw UserException::notFound();
-            }
-
-            return new UserResource($user);
-        } catch (UserException $e) {
-            throw $e;
-        } catch (Exception $e) {
-            Log::error('Error fetching user', [
-                'user_id' => $id,
-                'error'   => $e->getMessage(),
-                'trace'   => $e->getTraceAsString()
-            ]);
-
-            throw new Exception("Error retrieving user", 500);
-        }
-    }
-
     public function createUser(array $data)
     {
         try {

@@ -2,10 +2,14 @@
 
 namespace App\Http\Resources;
 
-use Carbon\Carbon;
+use App\Http\Resources\V1\UserResource;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Resources\Json\JsonResource;
+
+use Carbon\Carbon;
+use Illuminate\Support\Number;
 
 class BaseResource extends JsonResource
 {
@@ -14,30 +18,40 @@ class BaseResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            /**
+             * ID do item.
+             * 
+             * @var int
+             */
             'id' => $this->id,
+
+            /**
+             * Data de criação do item.
+             * 
+             * Formato: `d/m/Y H:i:s`.
+             * 
+             * @var string
+             */
             'created_at'  => $this->formatTimestamp($this->created_at),
+
+            /**
+             * Data da última atualização do item.
+             * 
+             * Formato: `d/m/Y H:i:s`.
+             * 
+             * @var string
+             */
             'updated_at'  => $this->formatTimestamp($this->updated_at),
         ];
     }
 
-    protected function formatUser($user, $authenticatedUser)
+    protected function formatUser($user)
     {
         if (!$user) {
             return null;
         }
 
-        $isAuthenticatedUser = $authenticatedUser && $user->id === $authenticatedUser->id;
-        $balance = $isAuthenticatedUser
-            ? $this->formatCurrency($user->balance)
-            : self::PROTECTED_BALANCE_PLACEHOLDER;
-
-        return [
-            'id' => $user->id,
-            'firstName' => $user->firstName,
-            'lastName' => $user->lastName,
-            'fullName' => "{$user->firstName} {$user->lastName}",
-            'balance' => $balance
-        ];
+        return new UserResource($user);
     }
 
     protected function protectAmount($amount, $sender_id = null, $receiver_id = null)
@@ -69,6 +83,6 @@ class BaseResource extends JsonResource
 
     protected function formatCurrency($value)
     {
-        return "R$ " . number_format($value, 2, ',', '.');
+        return Number::currency($value, in: 'BRL');
     }
 }

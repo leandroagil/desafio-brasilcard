@@ -7,11 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\TransactionResource;
 use App\Models\Transaction;
 use App\Services\TransactionService;
-
+use Dedoc\Scramble\Attributes\BodyParameter;
+use Dedoc\Scramble\Attributes\PathParameter;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 use Exception;
+use Illuminate\Http\JsonResponse;
 
 class TransactionController extends Controller
 {
@@ -27,7 +29,7 @@ class TransactionController extends Controller
      * 
      * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource[]}
      */
-    public function index()
+    public function index(): JsonResponse
     {
         try {
             $transactions = $this->transactionService->getAllTransactions();
@@ -42,7 +44,11 @@ class TransactionController extends Controller
      * 
      * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource}
      */
-    public function store(Request $request)
+    #[BodyParameter('sender_id', description: 'ID do usuário que está enviando a transferência.', type: 'int', example: 1)]
+    #[BodyParameter('receiver_id', description: 'ID do usuário que está recebendo a transferência.', type: 'int', example: 2)]
+    #[BodyParameter('amount', description: 'Valor a ser transferido.', type: 'float', example: 100.50)]
+    #[BodyParameter('description', description: 'Descrição opcional da transação.', type: 'string', example: 'Pagamento de serviço')]
+    public function store(Request $request): JsonResponse
     {
         try {
             $transaction = $this->transactionService->transfer($request->all());
@@ -61,28 +67,10 @@ class TransactionController extends Controller
      * 
      * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource}
      */
-    public function show(Transaction $transaction)
+    #[PathParameter('transaction', description: 'ID da transação.')]
+    public function show(Transaction $transaction): JsonResponse
     {
         return $this->response('Transação encontrada!', 200, new TransactionResource($transaction));
-    }
-
-    /**
-     * Remover transação
-     * 
-     * @response array{success: boolean, message: string}
-     */
-    public function destroy(Transaction $transaction)
-    {
-        try {
-            $this->transactionService->destroy($transaction);
-            return $this->response('Transação removida com sucesso');
-        } catch (ValidationException $e) {
-            return $this->error('Erro de validação.', 400, ['error' => $e->errors()]);
-        } catch (TransactionException $e) {
-            return $this->error('Erro ao remover transação', $e->getCode(), ['error' => $e->getMessage()]);
-        } catch (\Exception $e) {
-            return $this->error('Erro ao remover transação', 400, ['error' => $e->getMessage()]);
-        }
     }
 
     /**
@@ -90,7 +78,9 @@ class TransactionController extends Controller
      * 
      * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource}
      */
-    public function deposit(Request $request)
+    #[BodyParameter('user_id', description: 'ID do usuário que está realizando o depósito.', type: 'int', example: 1)]
+    #[BodyParameter('amount', description: 'Valor a ser depositado.', type: 'float', example: 500.00)]
+    public function deposit(Request $request): JsonResponse
     {
         try {
             $deposit = $this->transactionService->deposit($request->all());
@@ -109,7 +99,8 @@ class TransactionController extends Controller
      * 
      * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource}
      */
-    public function reverse(Transaction $transaction)
+    #[PathParameter('transaction', description: 'ID da transação a ser revertida.')]
+    public function reverse(Transaction $transaction): JsonResponse
     {
         try {
             $reversedTransaction = $this->transactionService->reverse($transaction);
@@ -120,6 +111,26 @@ class TransactionController extends Controller
             return $this->error('Erro ao reverter transação.', $e->getCode(), ['error' => $e->getMessage()]);
         } catch (\Exception $e) {
             return $this->error('Erro ao reverter transação', 400, ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Remover transação
+     * 
+     * @response array{success: boolean, message: string}
+     */
+    #[PathParameter('transaction', description: 'ID da transação.')]
+    public function destroy(Transaction $transaction): JsonResponse
+    {
+        try {
+            $this->transactionService->destroy($transaction);
+            return $this->response('Transação removida com sucesso');
+        } catch (ValidationException $e) {
+            return $this->error('Erro de validação.', 400, ['error' => $e->errors()]);
+        } catch (TransactionException $e) {
+            return $this->error('Erro ao remover transação', $e->getCode(), ['error' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            return $this->error('Erro ao remover transação', 400, ['error' => $e->getMessage()]);
         }
     }
 }

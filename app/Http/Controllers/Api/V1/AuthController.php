@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Services\AuthService;
 use App\Exceptions\AuthException;
-
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +24,11 @@ class AuthController extends Controller
      * 
      * @response array{success: boolean, message: string, data: array{user: \App\Http\Resources\V1\UserResource}}
      */
+
+    #[BodyParameter('firstName', description: 'Primeiro nome do usuário.', type: 'string', example: 'João')]
+    #[BodyParameter('lastName', description: 'Sobrenome do usuário.', type: 'string', example: 'Silva')]
+    #[BodyParameter('email', description: 'Endereço de e-mail do usuário.', type: 'string', example: 'joao.silva@example.com')]
+    #[BodyParameter('password', description: 'Senha do usuário.', type: 'string', example: 'SenhaForte@123')]
     public function register(Request $request): JsonResponse
     {
         try {
@@ -41,6 +46,9 @@ class AuthController extends Controller
      * 
      * @response array{success: boolean, message: string, data: array{token: string, token_type: string, expires_at: string, user: \App\Http\Resources\V1\UserResource}}
      */
+
+    #[BodyParameter('email', description: 'Endereço de e-mail do usuário.', type: 'string', example: 'joao.silva@example.com')]
+    #[BodyParameter('password', description: 'Senha do usuário.', type: 'string', example: 'SenhaForte@123')]
     public function login(Request $request): JsonResponse
     {
         try {

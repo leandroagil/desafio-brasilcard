@@ -39,17 +39,17 @@ return [
         /*
          * Define the title of the documentation's website. App name is used when this config is `null`.
          */
-        'title' => 'Desafio Backend PHP - Grupo Adriano Cobuccio',
+        'title' => 'Desafio Backend PHP',
 
         /*
          * Define the theme of the documentation. Available options are `light` and `dark`.
          */
-        'theme' => 'dark',
+        'theme' => 'light',
 
         /*
          * Hide the `Try It` feature. Enabled by default.
          */
-        'hide_try_it' => false,
+        'hide_try_it' => true,
 
         /*
          * Hide the schemas in the Table of Contents. Enabled by default.

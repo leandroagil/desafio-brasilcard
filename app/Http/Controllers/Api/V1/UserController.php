@@ -4,9 +4,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Exceptions\UserException;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\UserResource;
 use App\Services\UserService;
 use App\Models\User;
-
+use Dedoc\Scramble\Attributes\PathParameter;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -40,11 +41,11 @@ class UserController extends Controller
      * 
      * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\UserResource}
      */
-    public function show(int $id): JsonResponse
+    #[PathParameter('user', description: 'ID do usuário.')]
+    public function show(User $user): JsonResponse
     {
         try {
-            $user = $this->userService->getUserById($id);
-            return $this->response('User found successfully', 200, $user);
+            return $this->response('User found successfully', 200, new UserResource($user));
         } catch (UserException $e) {
             return $this->error('User not found', $e->getCode(), ['error' => $e->getMessage()]);
         } catch (\Exception $e) {
@@ -57,6 +58,7 @@ class UserController extends Controller
      * 
      * @response array{success: boolean, message: string}
      */
+    #[PathParameter('user', description: 'ID do usuário.')]
     public function destroy(User $user): JsonResponse
     {
         try {
