@@ -68,7 +68,7 @@ class TransactionService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            throw TransactionException::transactionUpdate();
+            throw TransactionException::transactionUpdate($e->getMessage());
         }
     }
 
@@ -112,7 +112,7 @@ class TransactionService
                 'error' => $e->getMessage()
             ]);
 
-            throw TransactionException::invalidTransfer();
+            throw TransactionException::invalidTransfer($e->getMessage());
         } catch (Exception $e) {
             Log::error('Error creating transfer', [
                 'data'  => $data,
@@ -120,7 +120,7 @@ class TransactionService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            throw TransactionException::transactionCreation();
+            throw TransactionException::transactionCreation($e->getMessage());
         }
     }
 
@@ -164,7 +164,7 @@ class TransactionService
                 'error' => $e->getMessage()
             ]);
 
-            throw TransactionException::invalidDeposit();
+            throw TransactionException::invalidDeposit($e->getMessage());
         } catch (Exception $e) {
             Log::error('Error creating deposit', [
                 'data' => $data,
@@ -226,7 +226,7 @@ class TransactionService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            throw TransactionException::transactionCreation();
+            throw TransactionException::transactionCreation($e->getMessage());
         }
     }
 
@@ -274,7 +274,7 @@ class TransactionService
                 'error' => $e->getMessage()
             ]);
 
-            throw TransactionException::transactionReversal();
+            throw TransactionException::transactionReversal($e->getMessage());
         } catch (Throwable $e) {
             Log::error('Error reversing transaction', [
                 'transaction_id' => $transaction->id,
@@ -282,7 +282,7 @@ class TransactionService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            throw TransactionException::transactionReversal();
+            throw TransactionException::transactionReversal($e->getMessage());
         }
     }
 

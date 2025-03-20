@@ -28,9 +28,6 @@ class AuthService
         try {
             $user = $this->userService->createUser($data);
 
-            $user->tokens()->delete();
-            $tokenResult = $user->createToken(self::AUTH_TOKEN_KEY);
-
             Log::info('User registered successfully', [
                 'user_id'    => $user->id,
                 'email'      => $user->email,
@@ -38,12 +35,7 @@ class AuthService
                 'user_agent' => request()->userAgent()
             ]);
 
-            return [
-                'user'       => new UserResource($user),
-                'token'      => $tokenResult->plainTextToken,
-                'token_type' => 'Bearer',
-                'expires_at' => now()->addDays(config('sanctum.expiration', 1)),
-            ];
+            return ['user' => new UserResource($user)];
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
@@ -53,7 +45,7 @@ class AuthService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            throw AuthException::register();
+            throw AuthException::register($e->getMessage());
         }
     }
 
@@ -100,7 +92,7 @@ class AuthService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            throw AuthException::login();
+            throw AuthException::login($e->getMessage());
         }
     }
 
@@ -123,33 +115,7 @@ class AuthService
                 'trace'   => $e->getTraceAsString()
             ]);
 
-            throw AuthException::logout();
-        }
-    }
-
-    public function validateToken(string $token): ?User
-    {
-        try {
-            $accessToken = PersonalAccessToken::findToken($token);
-
-            if (!$accessToken) {
-                return null;
-            }
-
-            $user = $accessToken->tokenable;
-
-            if ($user instanceof User) {
-                return $user;
-            }
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Error validating token', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return null;
+            throw AuthException::logout($e->getMessage());
         }
     }
 

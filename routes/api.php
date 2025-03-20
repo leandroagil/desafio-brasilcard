@@ -12,7 +12,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/transactions/deposit', [TransactionController::class, 'deposit']);
         Route::post('/transactions/reverse/{transaction}', [TransactionController::class, 'reverse']);
 
-        Route::apiResource('transactions', TransactionController::class);
-        Route::apiResource('users', UserController::class);
+        Route::apiResource('transactions', TransactionController::class, ['except' => ['update']]);
+        Route::apiResource('users', UserController::class, ['except' => ['update', 'store']]);
     });
 });

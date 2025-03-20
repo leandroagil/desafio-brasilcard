@@ -5,6 +5,9 @@ namespace App\Http\Resources\V1;
 use App\Http\Resources\BaseResource;
 use Illuminate\Http\Request;
 
+/**
+ * @property UserResource $resource
+ */
 class UserResource extends BaseResource
 {
     public function toArray(Request $request): array

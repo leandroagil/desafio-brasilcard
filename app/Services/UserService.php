@@ -7,7 +7,6 @@ use App\Http\Resources\V1\UserResource;
 use App\Models\User;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -50,6 +49,7 @@ class UserService
                 'error'   => $e->getMessage(),
                 'trace'   => $e->getTraceAsString()
             ]);
+
             throw new Exception("Error retrieving user", 500);
         }
     }
@@ -73,7 +73,7 @@ class UserService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            throw UserException::create();
+            throw UserException::create($e->getMessage());
         }
     }
 
@@ -98,7 +98,7 @@ class UserService
                 'trace'   => $e->getTraceAsString()
             ]);
 
-            throw UserException::delete();
+            throw UserException::delete($e->getMessage());
         }
     }
 

@@ -15,8 +15,8 @@ class BaseResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'created_at' => $this->formatTimestamp($this->created_at),
-            'updated_at' => $this->formatTimestamp($this->updated_at),
+            'created_at'  => $this->formatTimestamp($this->created_at),
+            'updated_at'  => $this->formatTimestamp($this->updated_at),
         ];
     }
 

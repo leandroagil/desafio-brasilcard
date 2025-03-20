@@ -20,6 +20,11 @@ class UserController extends Controller
         $this->userService = $userService;
     }
 
+    /**
+     * Obter usuários
+     * 
+     * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\UserResource[]}
+     */
     public function index(): JsonResponse
     {
         try {
@@ -30,6 +35,11 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Obter usuário
+     * 
+     * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\UserResource}
+     */
     public function show(int $id): JsonResponse
     {
         try {
@@ -42,25 +52,11 @@ class UserController extends Controller
         }
     }
 
-    public function store(Request $request): JsonResponse
-    {
-        try {
-            $user = $this->userService->createUser($request->all());
-            return $this->response('User created successfully', 201, $user);
-        } catch (ValidationException $e) {
-            return $this->error('Validation failed', 422, ['errors' => $e->errors()]);
-        } catch (UserException $e) {
-            return $this->error('Error creating user', $e->getCode(), ['error' => $e->getMessage()]);
-        } catch (\Exception $e) {
-            return $this->error('Unexpected error', 500, ['error' => $e->getMessage()]);
-        }
-    }
-
-    public function update(Request $request, User $user)
-    {
-        //
-    }
-
+    /**
+     * Remover
+     * 
+     * @response array{success: boolean, message: string}
+     */
     public function destroy(User $user): JsonResponse
     {
         try {

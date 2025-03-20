@@ -6,58 +6,53 @@ use Exception;
 
 class TransactionException extends Exception
 {
-    public static function insufficientFunds()
+    public static function insufficientFunds(string $message = "Insufficient funds for transfer")
     {
-        return new self("Insufficient funds for transfer", 400);
+        return new self($message, 400);
     }
 
-    public static function negativeReceiverBalance()
+    public static function negativeReceiverBalance(string $message = "Transfer canceled due to receiver's negative balance")
     {
-        return new self("Transfer canceled due to receiver's negative balance", 400);
+        return new self($message, 400);
     }
 
-    public static function negativeUserBalance()
+    public static function negativeUserBalance(string $message = "Deposit canceled due to user's negative balance")
     {
-        return new self("Deposit canceled due to user's negative balance", 400);
+        return new self($message, 400);
     }
 
-    public static function alreadyReversed()
+    public static function alreadyReversed(string $message = "Transaction has already been reversed")
     {
-        return new self("Transaction has already been reversed", 400);
+        return new self($message, 400);
     }
 
-    public static function invalidTransfer()
+    public static function invalidTransfer(string $message = "Invalid transfer data")
     {
-        return new self("Invalid transfer data", 400);
+        return new self($message, 400);
     }
 
-    public static function invalidDeposit()
+    public static function invalidDeposit(string $message = "Invalid deposit data")
     {
-        return new self("Invalid deposit data", 400);
+        return new self($message, 400);
     }
 
-    public static function transactionCreation()
+    public static function transactionCreation(string $message = "Error creating transaction")
     {
-        return new self("Error creating transaction", 500);
+        return new self($message, 500);
     }
 
-    public static function transactionUpdate()
+    public static function transactionUpdate(string $message = "Error updating transaction")
     {
-        return new self("Error updating transaction", 500);
+        return new self($message, 500);
     }
 
-    public static function transactionReversal()
+    public static function transactionReversal(string $message = "Error reversing transaction")
     {
-        return new self("Error reversing transaction", 500);
+        return new self($message, 500);
     }
 
-    public static function unauthorizedAction()
+    public static function notFound(string $message = "Transaction not found")
     {
-        return new self("Unauthorized transaction action", 403);
-    }
-
-    public static function notFound()
-    {
-        return new self("Transaction not found", 404);
+        return new self($message, 404);
     }
 }

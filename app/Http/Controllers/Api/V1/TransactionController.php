@@ -22,6 +22,11 @@ class TransactionController extends Controller
         $this->transactionService = $transactionService;
     }
 
+    /**
+     * Obter transações
+     * 
+     * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource[]}
+     */
     public function index()
     {
         try {
@@ -32,6 +37,11 @@ class TransactionController extends Controller
         }
     }
 
+    /**
+     * Transferir
+     * 
+     * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource}
+     */
     public function store(Request $request)
     {
         try {
@@ -46,16 +56,21 @@ class TransactionController extends Controller
         }
     }
 
+    /**
+     * Obter transação
+     * 
+     * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource}
+     */
     public function show(Transaction $transaction)
     {
         return $this->response('Transação encontrada!', 200, new TransactionResource($transaction));
     }
 
-    public function update(Request $request, Transaction $transaction)
-    {
-        //
-    }
-
+    /**
+     * Remover transação
+     * 
+     * @response array{success: boolean, message: string}
+     */
     public function destroy(Transaction $transaction)
     {
         try {
@@ -70,6 +85,11 @@ class TransactionController extends Controller
         }
     }
 
+    /**
+     * Depositar
+     * 
+     * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource}
+     */
     public function deposit(Request $request)
     {
         try {
@@ -84,6 +104,11 @@ class TransactionController extends Controller
         }
     }
 
+    /**
+     * Reverter
+     * 
+     * @response array{success: boolean, message: string, data: \App\Http\Resources\V1\TransactionResource}
+     */
     public function reverse(Transaction $transaction)
     {
         try {
