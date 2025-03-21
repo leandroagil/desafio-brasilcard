@@ -10,13 +10,12 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 use Exception;
 use Throwable;
 
-class TransactionService
+class TransactionService extends BaseService
 {
     const TYPE_TRANSFER = 'transfer';
     const TYPE_DEPOSIT = 'deposit';
@@ -32,12 +31,8 @@ class TransactionService
             $transactions = Transaction::with(['sender', 'receiver'])->latest()->paginate($perPage);;
             return TransactionResource::collection($transactions);
         } catch (Exception $e) {
-            Log::error('Error fetching transactions', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            throw new Exception("Error retrieving transactions", 500);
+            $this->logError('Erro ao resgatar transações', $e);
+            throw new Exception("Erro ao resgatar transações", 500);
         }
     }
 
@@ -53,7 +48,7 @@ class TransactionService
 
                 $result = $transaction->delete();
 
-                Log::info('Transaction deleted', [
+                $this->logInfo('Transação deletada com sucesso', [
                     'transaction_id' => $transaction->id
                 ]);
 
@@ -62,10 +57,8 @@ class TransactionService
         } catch (ModelNotFoundException $e) {
             throw TransactionException::notFound();
         } catch (Exception $e) {
-            Log::error('Error deleting transaction', [
-                'transaction_id' => $transaction->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            $this->logError('Erro ao deletar transação', $e, [
+                'transaction_id' => $transaction->id
             ]);
 
             throw TransactionException::transactionUpdate($e->getMessage());
@@ -95,7 +88,7 @@ class TransactionService
                 $sender->decrement('balance', $validatedData['amount']);
                 $receiver->increment('balance', $validatedData['amount']);
 
-                Log::info('Transfer completed', [
+                $this->logInfo('Erro ao deletar transação', [
                     'transaction_id' => $transaction->id,
                     'sender_id'      => $sender->id,
                     'receiver_id'    => $receiver->id,
@@ -107,17 +100,14 @@ class TransactionService
         } catch (ValidationException | TransactionException $e) {
             throw $e;
         } catch (ModelNotFoundException $e) {
-            Log::error('User not found in transfer', [
+            $this->logError('Usuário não encontrado na transferência', $e, [
                 'data'  => $data,
-                'error' => $e->getMessage()
             ]);
 
             throw TransactionException::invalidTransfer($e->getMessage());
         } catch (Exception $e) {
-            Log::error('Error creating transfer', [
+            $this->logError('Erro ao criar transferência', $e, [
                 'data'  => $data,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
 
             throw TransactionException::transactionCreation($e->getMessage());
@@ -148,7 +138,7 @@ class TransactionService
 
                 $user->increment('balance', $validatedData['amount']);
 
-                Log::info('Deposit completed', [
+                $this->logInfo('Usuário não encontrado na transferência', [
                     'transaction_id' => $deposit->id,
                     'user_id' => $user->id,
                     'amount' => $validatedData['amount']
@@ -159,17 +149,14 @@ class TransactionService
         } catch (ValidationException | TransactionException $e) {
             throw $e;
         } catch (ModelNotFoundException $e) {
-            Log::error('User not found in deposit', [
-                'data' => $data,
-                'error' => $e->getMessage()
+            $this->logError('Usuário não encontrado no depósito', $e, [
+                'data' => $data
             ]);
 
             throw TransactionException::invalidDeposit($e->getMessage());
         } catch (Exception $e) {
-            Log::error('Error creating deposit', [
-                'data' => $data,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            $this->logError('Erro ao criar depósito', $e, [
+                'data' => $data
             ]);
 
             throw TransactionException::transactionCreation();
@@ -203,13 +190,13 @@ class TransactionService
                     'receiver_id' => null,
                     'amount' => $validatedData['amount'],
                     'status' => self::STATUS_COMPLETED,
-                    'description' => $validatedData['description'] ?? 'Account withdrawal',
+                    'description' => $validatedData['description'] ?? 'Saque',
                     'type' => self::TYPE_WITHDRAW,
                 ]);
 
                 $user->decrement('balance', $validatedData['amount']);
 
-                Log::info('Withdrawal completed', [
+                $this->logInfo('Saque concluído com sucesso', [
                     'transaction_id' => $withdraw->id,
                     'user_id' => $user->id,
                     'amount' => $validatedData['amount']
@@ -220,10 +207,8 @@ class TransactionService
         } catch (ValidationException | TransactionException $e) {
             throw $e;
         } catch (Exception $e) {
-            Log::error('Error creating withdrawal', [
-                'data' => $data,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            $this->logError('Erro ao criar saque', $e, [
+                'data' => $data
             ]);
 
             throw TransactionException::transactionCreation($e->getMessage());
@@ -252,13 +237,13 @@ class TransactionService
                     'receiver_id' => $sender ? $sender->id : null,
                     'amount' => $transaction->amount,
                     'status' => self::STATUS_COMPLETED,
-                    'description' => 'Transaction reversed; original: ' . $transaction->id,
+                    'description' => 'Transação revertida; transação original: ' . $transaction->id,
                     'type' => self::TYPE_REVERSE,
                 ]);
 
                 $transaction->update(['status' => self::STATUS_REVERSED]);
 
-                Log::info('Transaction reversed', [
+                $this->logInfo('Transação revertida com sucesso', [
                     'original_transaction_id' => $transaction->id,
                     'reversal_transaction_id' => $reverseTransaction->id,
                     'amount' => $transaction->amount
@@ -269,17 +254,14 @@ class TransactionService
         } catch (TransactionException $e) {
             throw $e;
         } catch (ModelNotFoundException $e) {
-            Log::error('User not found in reversal', [
-                'transaction_id' => $transaction->id,
-                'error' => $e->getMessage()
+            $this->logError('Usuário não encontrado no saque', $e, [
+                'transaction_id' => $transaction->id
             ]);
 
             throw TransactionException::transactionReversal($e->getMessage());
         } catch (Throwable $e) {
-            Log::error('Error reversing transaction', [
-                'transaction_id' => $transaction->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            $this->logError('Erro ao reverter transação', $e, [
+                'transaction_id' => $transaction->id
             ]);
 
             throw TransactionException::transactionReversal($e->getMessage());

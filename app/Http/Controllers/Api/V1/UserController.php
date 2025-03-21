@@ -7,10 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\UserResource;
 use App\Services\UserService;
 use App\Models\User;
-use Dedoc\Scramble\Attributes\PathParameter;
-use Illuminate\Http\Request;
+
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\ValidationException;
+
+use Dedoc\Scramble\Attributes\PathParameter;
 
 class UserController extends Controller
 {
@@ -30,9 +30,9 @@ class UserController extends Controller
     {
         try {
             $users = $this->userService->getAllUsers(15);
-            return $this->response('Users found successfully', 200, $users);
+            return $this->response('Usuário encontrados', 200, $users);
         } catch (\Exception $e) {
-            return $this->error('Error fetching users', 500, ['error' => $e->getMessage()]);
+            return $this->error('Erro inesperado', 500, ['error' => $e->getMessage()]);
         }
     }
 
@@ -45,11 +45,9 @@ class UserController extends Controller
     public function show(User $user): JsonResponse
     {
         try {
-            return $this->response('User found successfully', 200, new UserResource($user));
-        } catch (UserException $e) {
-            return $this->error('User not found', $e->getCode(), ['error' => $e->getMessage()]);
+            return $this->response('Usuário encontrado com sucesso', 200, new UserResource($user));
         } catch (\Exception $e) {
-            return $this->error('Error fetching user', 500, ['error' => $e->getMessage()]);
+            return $this->error('Erro inesperado', 500, ['error' => $e->getMessage()]);
         }
     }
 
@@ -63,11 +61,11 @@ class UserController extends Controller
     {
         try {
             $this->userService->deleteUser($user);
-            return $this->response('User deleted successfully', 200);
+            return $this->response('Usuário removido com sucesso', 200);
         } catch (UserException $e) {
-            return $this->error('Error deleting user', $e->getCode(), ['error' => $e->getMessage()]);
+            return $this->error('Erro ao remover usuário', $e->getCode(), ['error' => $e->getMessage()]);
         } catch (\Exception $e) {
-            return $this->error('Unexpected error', 500, ['error' => $e->getMessage()]);
+            return $this->error('Erro inesperado', 500, ['error' => $e->getMessage()]);
         }
     }
 }

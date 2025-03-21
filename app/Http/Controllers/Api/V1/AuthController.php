@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Services\AuthService;
 use App\Exceptions\AuthException;
-use Dedoc\Scramble\Attributes\BodyParameter;
+
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\JsonResponse;
+
+use Dedoc\Scramble\Attributes\BodyParameter;
 
 class AuthController extends Controller
 {
@@ -20,7 +22,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Registrar
+     * Registro
      * 
      * @response array{success: boolean, message: string, data: array{user: \App\Http\Resources\V1\UserResource}}
      */
@@ -33,7 +35,7 @@ class AuthController extends Controller
     {
         try {
             $data = $this->authService->registerUser($request->all());
-            return $this->response('User registered successfully', 201, $data);
+            return $this->response('Usuário registrado com sucesso', 201, $data);
         } catch (ValidationException $e) {
             return $this->error('Dados inválidos', 422, ['errors' => $e->errors()]);
         } catch (AuthException | \Exception $e) {
@@ -42,7 +44,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Logar
+     * Login
      * 
      * @response array{success: boolean, message: string, data: array{token: string, token_type: string, expires_at: string, user: \App\Http\Resources\V1\UserResource}}
      */
@@ -65,7 +67,7 @@ class AuthController extends Controller
 
     /**
      * 
-     * Sair
+     * Logout
      * 
      * @response array{success: boolean, message: string}
      */
@@ -73,11 +75,11 @@ class AuthController extends Controller
     {
         try {
             $this->authService->logoutUser($request->user());
-            return $this->response('Logout successful', 200);
+            return $this->response('Deslogado com sucesso', 200);
         } catch (AuthException $e) {
             return $this->error($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
-            return $this->error('Error logging out', 500, ['error' => $e->getMessage()]);
+            return $this->error('Erro ao deslogar', 500, ['error' => $e->getMessage()]);
         }
     }
 }

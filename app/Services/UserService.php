@@ -10,24 +10,20 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 use Exception;
 use Throwable;
 
-class UserService
+class UserService extends BaseService
 {
     public function getAllUsers(int $perPage = 15)
     {
         try {
             return UserResource::collection(User::paginate($perPage));
         } catch (Exception $e) {
-            Log::error('Error fetching users', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw new Exception("Error retrieving users", 500);
+            $this->logError('Erro ao resgatar usuários', $e);
+            throw $e;
         }
     }
 
@@ -44,10 +40,8 @@ class UserService
         } catch (ValidationException $e) {
             throw $e;
         } catch (Exception $e) {
-            Log::error('Error creating user', [
-                'data'  => array_diff_key($data, array_flip(['password'])),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            $this->logError('Erro ao registrar usuário', $e, [
+                'data'  => array_diff_key($data, array_flip(['password']))
             ]);
 
             throw UserException::create($e->getMessage());
@@ -69,10 +63,8 @@ class UserService
         } catch (UserException $e) {
             throw $e;
         } catch (Throwable $e) {
-            Log::error('Error deleting user', [
+            $this->logError('Erro ao deletar usuário', $e, [
                 'user_id' => $user->id,
-                'error'   => $e->getMessage(),
-                'trace'   => $e->getTraceAsString()
             ]);
 
             throw UserException::delete($e->getMessage());

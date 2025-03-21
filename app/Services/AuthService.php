@@ -9,10 +9,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use Laravel\Sanctum\PersonalAccessToken;
 
-class AuthService
+use Exception;
+
+class AuthService extends BaseService
 {
     const AUTH_TOKEN_KEY = 'access_token';
 
@@ -28,23 +28,17 @@ class AuthService
         try {
             $user = $this->userService->createUser($data);
 
-            Log::info('User registered successfully', [
+            $this->logInfo('Usuário registrado com sucesso', [
                 'user_id'    => $user->id,
-                'email'      => $user->email,
-                'ip'         => request()->ip(),
-                'user_agent' => request()->userAgent()
+                'email'      => $user->email
             ]);
 
             return ['user' => new UserResource($user)];
         } catch (ValidationException $e) {
+            $this->logError('Erro ao validar registro de usuário', $e);
             throw $e;
         } catch (\Exception $e) {
-            Log::error('Error registering user', [
-                'email' => $data['email'] ?? null,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
+            $this->logError('Erro ao registrar usuário', $e, ['email' => $data['email'] ?? null]);
             throw AuthException::register($e->getMessage());
         }
     }
@@ -59,9 +53,8 @@ class AuthService
                 'email'    => $validatedData['email'],
                 'password' => $validatedData['password']
             ])) {
-                Log::warning('Login attempt failed - Invalid credentials', [
-                    'email' => $validatedData['email'],
-                    'ip'    => request()->ip()
+                $this->logError('Erro ao logar - credenciais inválidas', new Exception('Credenciais inválidas'), [
+                    'email' => $validatedData['email']
                 ]);
 
                 throw AuthException::invalidCredentials();
@@ -70,11 +63,9 @@ class AuthService
             $user->tokens()->delete();
             $tokenResult = $user->createToken(self::AUTH_TOKEN_KEY);
 
-            Log::info('User logged in successfully with new token', [
+            $this->logInfo('Usuário logado com sucesso', [
                 'user_id'    => $user->id,
-                'email'      => $user->email,
-                'ip'         => request()->ip(),
-                'user_agent' => request()->userAgent()
+                'email'      => $user->email
             ]);
 
             return [
@@ -86,10 +77,8 @@ class AuthService
         } catch (AuthException | ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
-            Log::error('Error during login', [
-                'email' => $data['email'] ?? 'unknown',
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            $this->logError('Erro durante login', $e, [
+                'email' => $validatedData['email'],
             ]);
 
             throw AuthException::login($e->getMessage());
@@ -101,18 +90,15 @@ class AuthService
         try {
             $user->tokens()->delete();
 
-            Log::info('User logged out successfully', [
+            $this->logInfo('Usuário deslogado com sucesso' . [
                 'user_id' => $user->id,
                 'email'   => $user->email,
-                'ip'      => request()->ip()
             ]);
 
             return true;
         } catch (\Exception $e) {
-            Log::error('Error during logout', [
+            $this->logError('Erro ao deslogar usuário', $e, [
                 'user_id' => $user->id,
-                'error'   => $e->getMessage(),
-                'trace'   => $e->getTraceAsString()
             ]);
 
             throw AuthException::logout($e->getMessage());
