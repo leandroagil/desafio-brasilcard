@@ -90,7 +90,7 @@ class AuthService extends BaseService
         try {
             $user->tokens()->delete();
 
-            $this->logInfo('Usuário deslogado com sucesso' . [
+            $this->logInfo('Usuário deslogado com sucesso', [
                 'user_id' => $user->id,
                 'email'   => $user->email,
             ]);

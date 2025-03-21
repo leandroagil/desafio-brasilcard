@@ -55,7 +55,7 @@ class TransactionController extends Controller
             $transaction = $this->transactionService->transfer($request->all());
             return $this->response('Transferência realizada com sucesso!', 201, $transaction);
         } catch (ValidationException $e) {
-            return $this->error('Erro de validação.', 400, ['errors' => $e->errors()]);
+            return $this->error('Erro de validação.', 400, $e->errors());
         } catch (TransactionException $e) {
             return $this->error('Erro ao processar transferência.', $e->getCode(), ['error' => $e->getMessage()]);
         } catch (\Exception $e) {
@@ -91,7 +91,7 @@ class TransactionController extends Controller
             $deposit = $this->transactionService->deposit($request->all());
             return $this->response('Depósito realizado com sucesso!', 201, $deposit);
         } catch (ValidationException $e) {
-            return $this->error('Erro de validação.', 400, ['errors' => $e->errors()]);
+            return $this->error('Erro de validação.', 400, $e->errors());
         } catch (TransactionException $e) {
             return $this->error('Erro ao processar depósito.', $e->getCode(), ['error' => $e->getMessage()]);
         } catch (\Exception $e) {
@@ -111,7 +111,7 @@ class TransactionController extends Controller
             $reversedTransaction = $this->transactionService->reverse($transaction);
             return $this->response('Transação revertida com sucesso!', 201, $reversedTransaction);
         } catch (ValidationException $e) {
-            return $this->error('Erro de validação.', 400, ['errors' => $e->errors()]);
+            return $this->error('Erro de validação.', 400, $e->errors());
         } catch (TransactionException $e) {
             return $this->error('Erro ao reverter transação.', $e->getCode(), ['error' => $e->getMessage()]);
         } catch (\Exception $e) {
@@ -131,7 +131,7 @@ class TransactionController extends Controller
             $this->transactionService->destroy($transaction);
             return $this->response('Transação removida com sucesso');
         } catch (ValidationException $e) {
-            return $this->error('Erro de validação.', 400, ['errors' => $e->errors()]);
+            return $this->error('Erro de validação.', 400, $e->errors());
         } catch (TransactionException $e) {
             return $this->error('Erro ao remover transação', $e->getCode(), ['error' => $e->getMessage()]);
         } catch (\Exception $e) {

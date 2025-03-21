@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 class BaseService
 {
-    const SHOW_DETAILS = false;
+    const SHOW_DETAILS = true;
 
     protected function logError(string $message = "Erro inesperado", Exception $error, array $data = [])
     {

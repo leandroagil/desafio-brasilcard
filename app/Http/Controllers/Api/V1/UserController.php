@@ -30,7 +30,7 @@ class UserController extends Controller
     {
         try {
             $users = $this->userService->getAllUsers(15);
-            return $this->response('Usuário encontrados', 200, $users);
+            return $this->response('Usuários encontrados com sucesso', 200, $users);
         } catch (\Exception $e) {
             return $this->error('Erro inesperado', 500, ['error' => $e->getMessage()]);
         }
