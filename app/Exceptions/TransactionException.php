@@ -6,52 +6,52 @@ use Exception;
 
 class TransactionException extends Exception
 {
-    public static function insufficientFunds(string $message = "Insufficient funds for transfer")
+    public static function insufficientFunds(string $message = "Fundos insuficientes para transferência")
     {
         return new self($message, 400);
     }
 
-    public static function negativeReceiverBalance(string $message = "Transfer canceled due to receiver's negative balance")
+    public static function negativeReceiverBalance(string $message = "Transferência cancelada devido ao saldo negativo do destinatário")
     {
         return new self($message, 400);
     }
 
-    public static function negativeUserBalance(string $message = "Deposit canceled due to user's negative balance")
+    public static function negativeUserBalance(string $message = "Depósito cancelado devido ao saldo negativo do usuário")
     {
         return new self($message, 400);
     }
 
-    public static function alreadyReversed(string $message = "Transaction has already been reversed")
+    public static function alreadyReversed(string $message = "A transação já foi revertida")
     {
         return new self($message, 400);
     }
 
-    public static function invalidTransfer(string $message = "Invalid transfer data")
+    public static function invalidTransfer(string $message = "Dados de transferência inválidos")
     {
         return new self($message, 400);
     }
 
-    public static function invalidDeposit(string $message = "Invalid deposit data")
+    public static function invalidDeposit(string $message = "Dados de depósito inválidos")
     {
         return new self($message, 400);
     }
 
-    public static function transactionCreation(string $message = "Error creating transaction")
+    public static function transactionCreation(string $message = "Erro ao criar a transação")
     {
         return new self($message, 500);
     }
 
-    public static function transactionUpdate(string $message = "Error updating transaction")
+    public static function transactionUpdate(string $message = "Erro ao atualizar a transação")
     {
         return new self($message, 500);
     }
 
-    public static function transactionReversal(string $message = "Error reversing transaction")
+    public static function transactionReversal(string $message = "Erro ao reverter a transação")
     {
         return new self($message, 500);
     }
 
-    public static function notFound(string $message = "Transaction not found")
+    public static function notFound(string $message = "Transação não encontrada")
     {
         return new self($message, 404);
     }
