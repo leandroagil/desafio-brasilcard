@@ -6,9 +6,10 @@ use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Dedoc\Scramble\Scramble;
 
+use Illuminate\Routing\Route;
+
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Illuminate\Routing\Route;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,9 +31,7 @@ class AppServiceProvider extends ServiceProvider
                 return Str::startsWith($route->uri, 'api/');
             })
             ->withDocumentTransformers(function (OpenApi $openApi) {
-                $openApi->secure(
-                    SecurityScheme::http('bearer')
-                );
+                $openApi->secure(SecurityScheme::http('bearer'));
             });
     }
 }

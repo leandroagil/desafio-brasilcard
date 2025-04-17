@@ -14,37 +14,37 @@ class UserResource extends BaseResource
             [
                 /**
                  * Nome do usuário.
-                 * 
+                 *
                  * @var string
                  */
                 'firstName' => $this->firstName,
 
                 /**
                  * Sobrenome do usuário.
-                 * 
+                 *
                  * @var string
                  */
                 'lastName' => $this->lastName,
 
                 /**
                  * Nome completo do usuário.
-                 * 
+                 *
                  * @var string
                  */
                 'fullName' => "{$this->firstName} {$this->lastName}",
 
                 /**
                  * Endereço de e-mail do usuário.
-                 * 
+                 *
                  * @var string
                  */
                 'email' => $this->email,
 
                 /**
                  * Saldo do usuário.
-                 * 
+                 *
                  * O saldo pode ser protegido para ocultação ou anonimização.
-                 * 
+                 *
                  * @var string
                  */
                 'balance' => $this->protectAmount($this->balance, $this->id, $this->id),

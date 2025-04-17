@@ -2,9 +2,7 @@
 
 namespace App\Traits;
 
-use Illuminate\Contracts\Support\MessageBag;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\JsonResource;
 
 trait HttpResponses
 {

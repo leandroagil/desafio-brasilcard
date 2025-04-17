@@ -7,22 +7,12 @@ use Illuminate\Support\Facades\Log;
 
 class BaseService
 {
-    const SHOW_DETAILS = true;
 
     protected function logError(string $message = "Erro inesperado", Exception $error, array $data = [])
     {
-        if (self::SHOW_DETAILS) {
-            Log::error($message, [
-                'error' => $error->getMessage(),
-                'trace' => $error->getTraceAsString(),
-                'data'  => $data
-            ]);
-
-            return;
-        }
-
         Log::error($message, [
             'error' => $error->getMessage(),
+            'trace' => $error->getTraceAsString(),
             'data'  => $data
         ]);
     }

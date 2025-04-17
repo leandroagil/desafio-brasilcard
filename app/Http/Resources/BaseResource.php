@@ -20,25 +20,25 @@ class BaseResource extends JsonResource
         return [
             /**
              * ID do item.
-             * 
+             *
              * @var int
              */
             'id' => $this->id,
 
             /**
              * Data de criação do item.
-             * 
+             *
              * Formato: `d/m/Y H:i:s`.
-             * 
+             *
              * @var string
              */
             'created_at'  => $this->formatTimestamp($this->created_at),
 
             /**
              * Data da última atualização do item.
-             * 
+             *
              * Formato: `d/m/Y H:i:s`.
-             * 
+             *
              * @var string
              */
             'updated_at'  => $this->formatTimestamp($this->updated_at),
